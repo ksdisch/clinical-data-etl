@@ -173,10 +173,10 @@ clinical-data-etl/
 
 ## Current Priority
 
-**Task 7 — Build ingestion layer: per-table pandera schemas, Train/Test merge, load to PostgreSQL raw schema**
+**Task 8 — Build dbt transformation layer: staging, intermediate joins, star schema marts**
 
-- Define pandera schemas in `schemas.py`: `BeneficiarySchema`, `InpatientClaimSchema`, `OutpatientClaimSchema`, `ProviderSchema`
-- `ProviderSchema` must handle nullable `PotentialFraud` (missing from Test split)
-- Implement loaders in `loaders.py`: read Train + Test CSVs, validate each against schema, concatenate, write to PostgreSQL `raw` schema
-- Add database connection helper in `utils/db.py` using SQLAlchemy + python-dotenv
-- Write pytest tests for schema validation (valid data passes, bad data rejects)
+- Staging models: `stg_beneficiary`, `stg_inpatient_claims`, `stg_outpatient_claims`, `stg_providers` (clean types, rename columns)
+- Intermediate models: `int_claims_joined` (union inpatient + outpatient with claim_type flag, join to beneficiary/provider), `int_beneficiary_enriched` (chronic condition count, age computation)
+- Mart models: `fct_claims` (one row per claim), `dim_beneficiary` (one row per BeneID), `dim_provider` (one row per Provider, includes fraud label)
+- Schema tests in YAML: not_null, unique, relationships, accepted_values
+- Run `dbt build` end-to-end and verify mart tables

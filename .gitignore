@@ -29,3 +29,4 @@ Thumbs.db
 
 # Data — raw Kaggle datasets are not committed (too large / not ours to redistribute)
 data/raw/
+data/rejected/
