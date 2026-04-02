@@ -1,38 +1,50 @@
 # Clinical Data ETL Pipeline
 
-A multi-source clinical data ETL pipeline built with Python, PostgreSQL, dbt, and Prefect. Primary dataset: Medicare Claims Fraud Detection (4 related CSV tables from Kaggle).
+A multi-source clinical data ETL pipeline that ingests Medicare claims fraud detection data (4 related CSV tables), validates with pandera, stages into PostgreSQL, transforms with dbt into a star schema, and orchestrates with Prefect.
+
+Built as a portfolio project for Data Engineering / Analytics Engineering roles.
 
 ## Architecture
 
 ```
-  CSV files (Medicare claims, diabetes readmission, synthetic)
-       │
-       ▼
-  ┌──────────────────────────────┐
-  │  Ingestion (Python)          │
-  │  pandas + pandera            │
-  │  per-table schema validation │
-  └────────┬─────────────────────┘
-           ▼
-  ┌──────────────────────────────┐
-  │  PostgreSQL (raw schema)     │
-  │  raw.beneficiary             │
-  │  raw.inpatient_claims        │
-  │  raw.outpatient_claims       │
-  │  raw.providers               │
-  └────────┬─────────────────────┘
-           ▼
-  ┌──────────────────────────────┐
-  │  dbt Transforms              │
-  │  staging → intermediate      │
-  │  → marts (fct/dim)           │
-  └────────┬─────────────────────┘
-           ▼
-  ┌──────────────────────────────┐
-  │  fct_claims                  │
-  │  dim_beneficiary             │
-  │  dim_provider                │
-  └──────────────────────────────┘
+  data/raw/claims_fraud/
+  ┌──────────────────────────────────────────────┐
+  │  Train + Test Beneficiary CSVs               │
+  │  Train + Test Inpatient Claims CSVs          │
+  │  Train + Test Outpatient Claims CSVs         │
+  │  Train + Test Provider Labels CSVs           │
+  └──────────────────┬───────────────────────────┘
+                     ▼
+  ┌──────────────────────────────────────────────┐
+  │  Ingestion (Python)                          │
+  │  Per-table pandera schemas                   │
+  │  Merge Train/Test splits → single tables     │
+  │  Nullable fraud flag for Test providers      │
+  └──────────────────┬───────────────────────────┘
+                     ▼
+  ┌──────────────────────────────────────────────┐
+  │  PostgreSQL — raw schema                     │
+  │  raw.beneficiary                             │
+  │  raw.inpatient_claims                        │
+  │  raw.outpatient_claims                       │
+  │  raw.providers                               │
+  └──────────────────┬───────────────────────────┘
+                     ▼
+  ┌──────────────────────────────────────────────┐
+  │  dbt — staging → intermediate → marts        │
+  │                                              │
+  │  staging:      stg_beneficiary               │
+  │                stg_inpatient_claims           │
+  │                stg_outpatient_claims          │
+  │                stg_providers                  │
+  │                                              │
+  │  intermediate: int_claims_joined             │
+  │                int_beneficiary_enriched       │
+  │                                              │
+  │  marts:        fct_claims                    │
+  │                dim_beneficiary               │
+  │                dim_provider (+ fraud label)   │
+  └──────────────────────────────────────────────┘
 
   Orchestrated by Prefect
 ```
@@ -41,25 +53,20 @@ A multi-source clinical data ETL pipeline built with Python, PostgreSQL, dbt, an
 
 - Python 3.11+
 - Docker & Docker Compose
+- [Kaggle CLI](https://github.com/Kaggle/kaggle-api) (`pip install kaggle`) with API credentials configured
 - Git
 
 ## Setup
 
-### 1. Clone the repository
+### 1. Clone and install
 
 ```bash
-git clone https://github.com/<your-username>/clinical-data-etl.git
+git clone https://github.com/ksdisch/clinical-data-etl.git
 cd clinical-data-etl
+make setup
 ```
 
-### 2. Start PostgreSQL
-
-```bash
-cp .env.example .env
-docker compose up -d
-```
-
-### 3. Create a virtual environment and install
+Or manually:
 
 ```bash
 python -m venv .venv
@@ -67,18 +74,37 @@ source .venv/bin/activate
 pip install -e ".[dev]"
 ```
 
+### 2. Download data
+
+```bash
+make download-data
+```
+
+Or manually:
+
+```bash
+kaggle datasets download -d rohitrox/healthcare-provider-fraud-detection-analysis -p data/raw/claims_fraud/ --unzip
+kaggle datasets download -d brandao/diabetes -p data/raw/diabetes_readmission/ --unzip
+kaggle datasets download -d amulyas/synthetic-hospital-data -p data/raw/synthetic_hospital/ --unzip
+```
+
+### 3. Start PostgreSQL
+
+```bash
+cp .env.example .env   # edit credentials if needed
+make db-up
+```
+
 ### 4. Verify dbt connection
 
 ```bash
-cd dbt
-dbt debug
-cd ..
+cd dbt && dbt debug && cd ..
 ```
 
 ### 5. Run the pipeline
 
 ```bash
-# Coming soon — Prefect flow orchestration
+make pipeline   # coming soon
 ```
 
 ## Project Structure
@@ -87,12 +113,30 @@ cd ..
 src/clinical_data_etl/    Python package (ingestion, orchestration, utils)
 dbt/                      dbt project (staging, intermediate, marts models)
 tests/                    pytest test suite
-data/raw/                 Kaggle datasets (not committed — see CLAUDE.md for sources)
+data/raw/                 Kaggle datasets (gitignored — see setup instructions)
 ```
+
+## Makefile Targets
+
+| Target          | Description                                 |
+|-----------------|---------------------------------------------|
+| `make setup`    | Create venv and install package with dev deps |
+| `make download-data` | Download all Kaggle datasets            |
+| `make db-up`    | Start PostgreSQL container                  |
+| `make db-down`  | Stop PostgreSQL container                   |
+| `make test`     | Run pytest                                  |
+| `make lint`     | Run ruff linter                             |
+| `make pipeline` | Run full ETL pipeline (placeholder)         |
 
 ## Tech Stack
 
 - **Python** (pandas, pandera) — ingestion and validation
 - **PostgreSQL 16** — data warehouse (via Docker)
-- **dbt** — SQL transformations and testing
+- **dbt** (dbt-postgres) — SQL transformations and testing
 - **Prefect** — workflow orchestration
+- **pytest, ruff, mypy** — testing and code quality
+
+## Phase 2 Extensions
+
+- **Diabetes Readmission** (`data/raw/diabetes_readmission/`): 70K+ inpatient encounters with 55 features and readmission outcome. Source: Kaggle `brandao/diabetes`.
+- **Synthetic Hospital** (`data/raw/synthetic_hospital/`): Lightweight test dataset. Source: Kaggle `amulyas/synthetic-hospital-data`.

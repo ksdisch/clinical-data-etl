@@ -52,6 +52,19 @@ Location: `data/raw/synthetic_hospital/`
 | Docker       | PostgreSQL hosting       | -             |
 | pytest       | Testing                  | 8.x           |
 
+## Architectural Decisions
+
+### Scope
+- **MVP**: Only `claims_fraud` dataset. Diabetes readmission and synthetic hospital are Phase 2.
+
+### Ingestion
+- Train/Test CSV splits are **merged during ingestion** (this is ETL, not ML). Both files per table validate against the same pandera schema, get concatenated, and load into one raw table.
+- The Test Provider file (`Test-1542969243754.csv`) has **no PotentialFraud column**. Handle gracefully: the pandera `ProviderSchema` allows a nullable fraud flag, and the loader adds `PotentialFraud = NaN` when the column is missing.
+
+### Modeling
+- **Star schema marts**: `fct_claims` (grain: one row per claim), `dim_beneficiary` (one row per beneficiary), `dim_provider` (one row per provider, includes fraud label).
+- Fraud label stays in `dim_provider`, **NOT** denormalized onto `fct_claims`.
+
 ## Architecture
 
 ```
@@ -95,6 +108,7 @@ Orchestration (Prefect flows)
 ```
 clinical-data-etl/
 ├── CLAUDE.md
+├── Makefile
 ├── pyproject.toml
 ├── docker-compose.yml
 ├── .env.example
@@ -159,10 +173,10 @@ clinical-data-etl/
 
 ## Current Priority
 
-**Task 5 — Scaffold the repo**
+**Task 7 — Build ingestion layer: per-table pandera schemas, Train/Test merge, load to PostgreSQL raw schema**
 
-- Finalize folder structure and skeleton files
-- Set up `pyproject.toml` with dependencies
-- Create `docker-compose.yml` for PostgreSQL
-- Add `.env.example` with required environment variables
-- Wire up a basic Prefect flow that runs end-to-end (even if steps are stubs)
+- Define pandera schemas in `schemas.py`: `BeneficiarySchema`, `InpatientClaimSchema`, `OutpatientClaimSchema`, `ProviderSchema`
+- `ProviderSchema` must handle nullable `PotentialFraud` (missing from Test split)
+- Implement loaders in `loaders.py`: read Train + Test CSVs, validate each against schema, concatenate, write to PostgreSQL `raw` schema
+- Add database connection helper in `utils/db.py` using SQLAlchemy + python-dotenv
+- Write pytest tests for schema validation (valid data passes, bad data rejects)
