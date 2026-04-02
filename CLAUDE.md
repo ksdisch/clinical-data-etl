@@ -173,10 +173,9 @@ clinical-data-etl/
 
 ## Current Priority
 
-**Task 8 — Build dbt transformation layer: staging, intermediate joins, star schema marts**
+**Task 9 — Build Prefect orchestration layer: end-to-end pipeline flow (ingest → dbt run → dbt test → validate)**
 
-- Staging models: `stg_beneficiary`, `stg_inpatient_claims`, `stg_outpatient_claims`, `stg_providers` (clean types, rename columns)
-- Intermediate models: `int_claims_joined` (union inpatient + outpatient with claim_type flag, join to beneficiary/provider), `int_beneficiary_enriched` (chronic condition count, age computation)
-- Mart models: `fct_claims` (one row per claim), `dim_beneficiary` (one row per BeneID), `dim_provider` (one row per Provider, includes fraud label)
-- Schema tests in YAML: not_null, unique, relationships, accepted_values
-- Run `dbt build` end-to-end and verify mart tables
+- Create Prefect flow in `orchestration/flows.py` that runs: ingestion → dbt run → dbt test
+- Add error handling, retries, and logging
+- Create a CLI entry point to trigger the full pipeline
+- Update Makefile `pipeline` target to run the Prefect flow

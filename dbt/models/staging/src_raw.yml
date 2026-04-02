@@ -1,0 +1,10 @@
+version: 2
+
+sources:
+  - name: raw
+    schema: raw
+    tables:
+      - name: beneficiary
+      - name: inpatient_claims
+      - name: outpatient_claims
+      - name: providers

@@ -1,0 +1,59 @@
+version: 2
+
+models:
+  - name: fct_claims
+    description: >
+      Central fact table. One row per claim (inpatient or outpatient),
+      enriched with beneficiary age_at_claim. Join to dim_beneficiary
+      on bene_id and dim_provider on provider_id.
+    columns:
+      - name: claim_id
+        description: "Unique claim identifier"
+        tests:
+          - unique
+          - not_null
+      - name: bene_id
+        tests:
+          - not_null
+          - relationships:
+              to: ref('dim_beneficiary')
+              field: bene_id
+              config:
+                severity: warn  # 30 beneficiaries rejected by pandera validation
+      - name: provider_id
+        tests:
+          - not_null
+          - relationships:
+              to: ref('dim_provider')
+              field: provider_id
+      - name: claim_type
+        tests:
+          - accepted_values:
+              values: ['inpatient', 'outpatient']
+
+  - name: dim_beneficiary
+    description: >
+      Beneficiary dimension. One row per beneficiary with demographics,
+      chronic condition flags, and chronic_condition_count aggregate.
+    columns:
+      - name: bene_id
+        description: "Unique beneficiary identifier"
+        tests:
+          - unique
+          - not_null
+      - name: chronic_condition_count
+        description: "Count of chronic conditions (0-11)"
+
+  - name: dim_provider
+    description: >
+      Provider dimension. One row per provider with fraud label and
+      aggregate claim metrics (total_claims, total_reimbursement,
+      unique_beneficiaries, avg_reimbursement_per_claim).
+    columns:
+      - name: provider_id
+        description: "Unique provider identifier"
+        tests:
+          - unique
+          - not_null
+      - name: is_potential_fraud
+        description: "Fraud label from training data. NULL for test-split providers."

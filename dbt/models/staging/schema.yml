@@ -1,0 +1,73 @@
+version: 2
+
+models:
+  - name: stg_beneficiary
+    description: "Cleaned beneficiary demographics with snake_case columns, mapped gender/race/chronic conditions."
+    columns:
+      - name: bene_id
+        description: "Unique beneficiary identifier"
+        tests:
+          - unique
+          - not_null
+      - name: date_of_birth
+        tests:
+          - not_null
+      - name: gender
+        tests:
+          - accepted_values:
+              values: ['Male', 'Female']
+      - name: race
+        tests:
+          - accepted_values:
+              values: ['White', 'Black', 'Other', 'Hispanic', 'Unknown']
+
+  - name: stg_inpatient_claims
+    description: "Cleaned inpatient claims with dates cast, duration computed, columns renamed."
+    columns:
+      - name: claim_id
+        description: "Unique claim identifier"
+        tests:
+          - unique
+          - not_null
+      - name: bene_id
+        tests:
+          - not_null
+      - name: provider_id
+        tests:
+          - not_null
+      - name: claim_type
+        tests:
+          - accepted_values:
+              values: ['inpatient']
+      - name: reimbursement_amount
+        description: "Claim reimbursement amount (>= 0)"
+
+  - name: stg_outpatient_claims
+    description: "Cleaned outpatient claims. Same structure as inpatient minus admission/discharge dates."
+    columns:
+      - name: claim_id
+        description: "Unique claim identifier"
+        tests:
+          - unique
+          - not_null
+      - name: bene_id
+        tests:
+          - not_null
+      - name: provider_id
+        tests:
+          - not_null
+      - name: claim_type
+        tests:
+          - accepted_values:
+              values: ['outpatient']
+
+  - name: stg_providers
+    description: "Provider list with fraud label mapped to boolean."
+    columns:
+      - name: provider_id
+        description: "Unique provider identifier"
+        tests:
+          - unique
+          - not_null
+      - name: is_potential_fraud
+        description: "Fraud label from training data. NULL for test-split providers."

@@ -1,0 +1,24 @@
+version: 2
+
+models:
+  - name: int_claims_unified
+    description: >
+      Union of inpatient and outpatient claims with aligned columns.
+      Outpatient rows have NULL admission_date, discharge_date,
+      claim_duration_days, and diagnosis_group_code.
+    columns:
+      - name: claim_id
+        description: "Unique claim identifier across both claim types"
+      - name: claim_type
+        description: "'inpatient' or 'outpatient'"
+
+  - name: int_claims_enriched
+    description: >
+      Unified claims joined to beneficiary demographics.
+      Adds gender, race, date_of_birth, age_at_claim, and
+      chronic condition flags onto each claim row.
+    columns:
+      - name: claim_id
+        description: "Unique claim identifier"
+      - name: age_at_claim
+        description: "Beneficiary age in years at claim_start_date"
