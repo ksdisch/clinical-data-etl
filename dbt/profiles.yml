@@ -1,0 +1,12 @@
+clinical_data_etl:
+  target: dev
+  outputs:
+    dev:
+      type: postgres
+      host: "{{ env_var('POSTGRES_HOST', 'localhost') }}"
+      port: "{{ env_var('POSTGRES_PORT', '5432') | int }}"
+      user: "{{ env_var('POSTGRES_USER', 'etl_user') }}"
+      pass: "{{ env_var('POSTGRES_PASSWORD', 'etl_pass') }}"
+      dbname: "{{ env_var('POSTGRES_DB', 'clinical_etl') }}"
+      schema: raw
+      threads: 4
