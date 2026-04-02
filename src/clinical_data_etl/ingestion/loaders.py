@@ -131,13 +131,15 @@ def load_to_postgres(
     engine = get_engine()
     with engine.connect() as conn:
         conn.execute(text(f"CREATE SCHEMA IF NOT EXISTS {schema}"))
+        # CASCADE drops dependent views (dbt staging views) which get recreated by dbt run
+        conn.execute(text(f"DROP TABLE IF EXISTS {schema}.{table_name} CASCADE"))
         conn.commit()
 
     df.to_sql(
         table_name,
         engine,
         schema=schema,
-        if_exists="replace",
+        if_exists="append",
         index=False,
     )
     return len(df)

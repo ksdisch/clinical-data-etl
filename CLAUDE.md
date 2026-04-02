@@ -173,9 +173,11 @@ clinical-data-etl/
 
 ## Current Priority
 
-**Task 9 — Build Prefect orchestration layer: end-to-end pipeline flow (ingest → dbt run → dbt test → validate)**
+**MVP Complete — Pipeline runs end-to-end.** Next: polish README, add dbt docs, consider Phase 2 (diabetes readmission dataset).
 
-- Create Prefect flow in `orchestration/flows.py` that runs: ingestion → dbt run → dbt test
-- Add error handling, retries, and logging
-- Create a CLI entry point to trigger the full pipeline
-- Update Makefile `pipeline` target to run the Prefect flow
+### What works now
+- `make pipeline` — full end-to-end: ingest 848K rows → dbt run (9 models) → dbt test (28 tests) → validate marts (~36s)
+- `make pipeline-ingest` — ingestion only
+- `make pipeline-dbt` — dbt only (skip ingestion)
+- `python -m clinical_data_etl [--ingest-only | --dbt-only | --full]`
+- 34 pytest tests pass, 28 dbt tests pass (1 warn)

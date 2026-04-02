@@ -1,4 +1,4 @@
-.PHONY: setup download-data db-up db-down test lint pipeline
+.PHONY: setup download-data db-up db-down test lint pipeline pipeline-ingest pipeline-dbt
 
 setup:
 	python3.12 -m venv .venv
@@ -23,4 +23,10 @@ lint:
 	ruff check src/ tests/
 
 pipeline:
-	@echo "TODO: Run full ETL pipeline (Prefect flow)"
+	.venv/bin/python -m clinical_data_etl
+
+pipeline-ingest:
+	.venv/bin/python -m clinical_data_etl --ingest-only
+
+pipeline-dbt:
+	.venv/bin/python -m clinical_data_etl --dbt-only
