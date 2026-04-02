@@ -1,34 +1,38 @@
 # Clinical Data ETL Pipeline
 
-An end-to-end ETL pipeline for clinical falls data, built with Python, PostgreSQL, dbt, and Prefect.
+A multi-source clinical data ETL pipeline built with Python, PostgreSQL, dbt, and Prefect. Primary dataset: Medicare Claims Fraud Detection (4 related CSV tables from Kaggle).
 
 ## Architecture
 
 ```
-  CSV files (NDNQI falls data, long format)
+  CSV files (Medicare claims, diabetes readmission, synthetic)
        │
        ▼
-  ┌─────────────────────────┐
-  │  Ingestion (Python)     │
-  │  pandas + pandera       │
-  │  schema validation      │
-  └────────┬────────────────┘
+  ┌──────────────────────────────┐
+  │  Ingestion (Python)          │
+  │  pandas + pandera            │
+  │  per-table schema validation │
+  └────────┬─────────────────────┘
            ▼
-  ┌─────────────────────────┐
-  │  PostgreSQL (raw)       │
-  │  Staging tables         │
-  └────────┬────────────────┘
+  ┌──────────────────────────────┐
+  │  PostgreSQL (raw schema)     │
+  │  raw.beneficiary             │
+  │  raw.inpatient_claims        │
+  │  raw.outpatient_claims       │
+  │  raw.providers               │
+  └────────┬─────────────────────┘
            ▼
-  ┌─────────────────────────┐
-  │  dbt Transforms         │
-  │  staging → intermediate │
-  │  → marts                │
-  └────────┬────────────────┘
+  ┌──────────────────────────────┐
+  │  dbt Transforms              │
+  │  staging → intermediate      │
+  │  → marts (fct/dim)           │
+  └────────┬─────────────────────┘
            ▼
-  ┌─────────────────────────┐
-  │  Analytics-ready tables │
-  │  (fact + dimension)     │
-  └─────────────────────────┘
+  ┌──────────────────────────────┐
+  │  fct_claims                  │
+  │  dim_beneficiary             │
+  │  dim_provider                │
+  └──────────────────────────────┘
 
   Orchestrated by Prefect
 ```
@@ -83,7 +87,7 @@ cd ..
 src/clinical_data_etl/    Python package (ingestion, orchestration, utils)
 dbt/                      dbt project (staging, intermediate, marts models)
 tests/                    pytest test suite
-data/synthetic/           Sample NDNQI falls data
+data/raw/                 Kaggle datasets (not committed — see CLAUDE.md for sources)
 ```
 
 ## Tech Stack

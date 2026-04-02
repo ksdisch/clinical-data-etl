@@ -27,6 +27,5 @@ dbt/logs/
 .DS_Store
 Thumbs.db
 
-# Data (keep synthetic, ignore real data)
-data/*.csv
-!data/synthetic/
+# Data — raw Kaggle datasets are not committed (too large / not ours to redistribute)
+data/raw/

@@ -2,14 +2,41 @@
 
 ## Project Overview
 
-A portfolio project demonstrating Data Engineering and Analytics Engineering skills through a clinical data ETL pipeline. The pipeline ingests synthetic NDNQI (National Database of Nursing Quality Indicators) falls data from CSV files in long format, validates and stages it in PostgreSQL, transforms it with dbt, and orchestrates the workflow with Prefect.
+A portfolio project demonstrating Data Engineering and Analytics Engineering skills through a multi-source clinical data ETL pipeline. The pipeline ingests real Kaggle healthcare datasets — primarily Medicare claims fraud detection data (4 related CSV tables) — validates each table with pandera, stages into PostgreSQL, transforms with dbt, and orchestrates the workflow with Prefect.
 
 This project exists to showcase:
-- End-to-end ETL pipeline design and implementation
-- Data quality validation and testing practices
+- Multi-source, multi-table ETL pipeline design and implementation
+- Data quality validation with per-table pandera schemas
 - Dimensional modeling and analytics engineering with dbt
 - Workflow orchestration and error handling
 - Infrastructure-as-code with Docker
+
+### Data Sources
+
+**PRIMARY — Medicare Claims Fraud Detection**
+Source: Kaggle `rohitrox/healthcare-provider-fraud-detection-analysis`
+Location: `data/raw/claims_fraud/`
+
+| File | Description |
+|------|-------------|
+| `Train_Beneficiarydata-1542865627584.csv` | Beneficiary demographics: BeneID, DOB, DOD, Gender, Race, chronic condition flags, reimbursement amounts |
+| `Test_Beneficiarydata-1542969243754.csv` | Beneficiary test split |
+| `Train_Inpatientdata-1542865627584.csv` | Inpatient claims: BeneID, ClaimID, Provider, diagnosis/procedure codes, admission/discharge dates, reimbursement |
+| `Test_Inpatientdata-1542969243754.csv` | Inpatient claims test split |
+| `Train_Outpatientdata-1542865627584.csv` | Outpatient claims: same structure as inpatient, no admission dates |
+| `Test_Outpatientdata-1542969243754.csv` | Outpatient claims test split |
+| `Train-1542865627584.csv` | Provider fraud labels (Provider ID + PotentialFraud indicator) — train split |
+| `Test-1542969243754.csv` | Provider fraud labels — test split |
+
+**SECONDARY — Diabetes Readmission**
+Source: Kaggle `brandao/diabetes`
+Location: `data/raw/diabetes_readmission/`
+- `diabetic_data.csv` — 70K+ inpatient encounters, 55 features, readmission outcome
+
+**TERTIARY — Synthetic Hospital**
+Source: Kaggle `amulyas/synth-hospital-data`
+Location: `data/raw/synthetic_hospital/`
+- `HospitalSynthetic1.csv` — Lightweight dataset for testing and development
 
 ## Tech Stack
 
@@ -28,19 +55,28 @@ This project exists to showcase:
 ## Architecture
 
 ```
-CSV (long format)
+CSV files (4 claims_fraud tables + diabetes + synthetic)
   │
   ▼
-Ingestion (pandas + pandera validation)
+Ingestion (pandas + per-table pandera schemas)
+  │  Beneficiary CSV ──→ pandera BeneficiarySchema
+  │  Inpatient CSV   ──→ pandera InpatientClaimSchema
+  │  Outpatient CSV  ──→ pandera OutpatientClaimSchema
+  │  Provider CSV    ──→ pandera ProviderSchema
   │
   ▼
-Staging (PostgreSQL raw schema)
+PostgreSQL raw schema
+  │  raw.beneficiary
+  │  raw.inpatient_claims
+  │  raw.outpatient_claims
+  │  raw.providers
   │
   ▼
 dbt Transforms
-  ├── staging models (cleaned, typed, tested)
-  ├── intermediate models (pivoted, joined)
-  └── marts (analytics-ready tables)
+  ├── staging   (stg_beneficiary, stg_inpatient_claims,
+  │              stg_outpatient_claims, stg_providers)
+  ├── intermediate (int_claims_joined, int_beneficiary_enriched)
+  └── marts     (fct_claims, dim_beneficiary, dim_provider)
   │
   ▼
 Orchestration (Prefect flows)
@@ -48,10 +84,10 @@ Orchestration (Prefect flows)
 
 ### Data Flow
 
-1. **Ingestion**: Python reads CSV files from `data/synthetic/`, validates with pandera schemas, loads raw data into PostgreSQL `raw` schema.
-2. **Staging**: dbt staging models clean column names, cast types, deduplicate, and apply basic tests (not_null, unique, accepted_values).
-3. **Intermediate**: dbt intermediate models pivot long-format data to wide, join reference tables, compute derived fields.
-4. **Marts**: dbt mart models produce analytics-ready tables (e.g., fall rates by unit, risk-adjusted metrics).
+1. **Ingestion**: Python reads CSVs from `data/raw/claims_fraud/` (and secondary datasets), validates each table against its pandera schema, loads into PostgreSQL `raw` schema as separate tables.
+2. **Staging**: dbt staging models (`stg_beneficiary`, `stg_inpatient_claims`, `stg_outpatient_claims`, `stg_providers`) clean column names, cast types, merge train/test splits, and apply schema tests (not_null, unique, accepted_values).
+3. **Intermediate**: dbt intermediate models join claims to beneficiaries and providers, compute derived fields (claim duration, age at claim, chronic condition counts).
+4. **Marts**: dbt mart models produce analytics-ready tables — `fct_claims` (grain: one row per claim with all dimensions), `dim_beneficiary`, `dim_provider` (with fraud label).
 5. **Orchestration**: Prefect flows coordinate the full pipeline: ingest → dbt run → dbt test, with retries and notifications.
 
 ## Folder Structure
@@ -63,7 +99,10 @@ clinical-data-etl/
 ├── docker-compose.yml
 ├── .env.example
 ├── data/
-│   └── synthetic/          # Synthetic NDNQI falls CSVs
+│   └── raw/
+│       ├── claims_fraud/           # Medicare claims fraud CSVs (primary)
+│       ├── diabetes_readmission/   # Diabetes readmission CSV (secondary)
+│       └── synthetic_hospital/     # Synthetic hospital CSV (tertiary)
 ├── src/
 │   └── clinical_data_etl/
 │       ├── __init__.py
@@ -120,10 +159,10 @@ clinical-data-etl/
 
 ## Current Priority
 
-**Task 7 — Build ingestion layer (pandera validation → PostgreSQL staging)**
+**Task 5 — Scaffold the repo**
 
-- Define pandera schemas in `src/clinical_data_etl/ingestion/schemas.py` for falls CSV columns
-- Implement CSV loader in `loaders.py`: read CSV, validate with pandera, write to PostgreSQL `raw` schema
-- Add database connection helper in `utils/db.py` using SQLAlchemy + python-dotenv
-- Write pytest tests for schema validation (valid data passes, bad data fails)
-- Test end-to-end: CSV → validate → PostgreSQL `raw.falls` table
+- Finalize folder structure and skeleton files
+- Set up `pyproject.toml` with dependencies
+- Create `docker-compose.yml` for PostgreSQL
+- Add `.env.example` with required environment variables
+- Wire up a basic Prefect flow that runs end-to-end (even if steps are stubs)
