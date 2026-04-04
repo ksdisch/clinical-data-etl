@@ -11,7 +11,6 @@ from clinical_data_etl.ingestion.schemas import (
     ProviderSchema,
 )
 
-
 # ── Beneficiary ──────────────────────────────────────────────────────
 
 
@@ -172,7 +171,7 @@ def test_outpatient_valid():
 
 
 def test_outpatient_has_no_admission_columns():
-    """Outpatient schema should not expect AdmissionDt, DischargeDt, DiagnosisGroupCode."""
+    """Outpatient schema should not expect admission-specific columns."""
     row = _valid_outpatient_row()
     df = pd.DataFrame([row])
     assert "AdmissionDt" not in df.columns

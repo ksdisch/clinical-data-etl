@@ -1,7 +1,6 @@
 """CLI entry point: python -m clinical_data_etl"""
 
 import argparse
-import sys
 
 
 def main() -> None:

@@ -9,8 +9,7 @@ from clinical_data_etl.ingestion.loaders import (
     load_and_merge,
     validate,
 )
-from clinical_data_etl.ingestion.schemas import BeneficiarySchema, ProviderSchema
-
+from clinical_data_etl.ingestion.schemas import ProviderSchema
 
 # ── load_and_merge ───────────────────────────────────────────────────
 
@@ -94,9 +93,10 @@ class TestIngestionIntegration:
             pytest.skip("PostgreSQL not available — run `make db-up`")
 
     def test_run_ingestion_loads_all_tables(self):
+        from sqlalchemy import text
+
         from clinical_data_etl.ingestion.loaders import run_ingestion
         from clinical_data_etl.utils.db import get_engine
-        from sqlalchemy import text
 
         summary = run_ingestion()
 

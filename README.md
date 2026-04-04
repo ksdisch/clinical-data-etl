@@ -38,8 +38,8 @@ Built as a portfolio project for Data Engineering / Analytics Engineering roles.
   │                stg_outpatient_claims          │
   │                stg_providers                  │
   │                                              │
-  │  intermediate: int_claims_joined             │
-  │                int_beneficiary_enriched       │
+  │  intermediate: int_claims_unified              │
+  │                int_claims_enriched             │
   │                                              │
   │  marts:        fct_claims                    │
   │                dim_beneficiary               │
@@ -47,6 +47,58 @@ Built as a portfolio project for Data Engineering / Analytics Engineering roles.
   └──────────────────────────────────────────────┘
 
   Orchestrated by Prefect
+```
+
+## Star Schema ERD
+
+```
+┌─────────────────────────────┐
+│       dim_beneficiary       │
+├─────────────────────────────┤
+│ bene_id              (PK)   │
+│ date_of_birth               │
+│ date_of_death               │
+│ gender                      │
+│ race                        │
+│ state_code                  │
+│ county_code                 │
+│ has_alzheimers  ... (×11)   │
+│ chronic_condition_count     │
+│ total_ip_reimbursement      │
+│ total_op_reimbursement      │
+└──────────────┬──────────────┘
+               │ bene_id
+               │
+┌──────────────┴──────────────┐
+│          fct_claims         │
+├─────────────────────────────┤
+│ claim_id             (PK)   │
+│ bene_id              (FK)───┘
+│ provider_id          (FK)───┐
+│ claim_type                  │
+│ claim_start_date            │
+│ claim_end_date              │
+│ admission_date              │
+│ discharge_date              │
+│ claim_duration_days         │
+│ reimbursement_amount        │
+│ deductible_amount           │
+│ age_at_claim                │
+│ diagnosis_code_1 ... (×10)  │
+│ procedure_code_1 ... (×6)   │
+└──────────────┬──────────────┘
+               │ provider_id
+               │
+┌──────────────┴──────────────┐
+│        dim_provider         │
+├─────────────────────────────┤
+│ provider_id          (PK)   │
+│ is_potential_fraud          │
+│ total_claims                │
+│ total_reimbursement         │
+│ unique_beneficiaries        │
+│ avg_reimbursement_per_claim │
+└─────────────────────────────┘
 ```
 
 ## Prerequisites
@@ -104,7 +156,7 @@ cd dbt && dbt debug && cd ..
 ### 5. Run the pipeline
 
 ```bash
-make pipeline   # coming soon
+make pipeline
 ```
 
 ## Project Structure
@@ -126,7 +178,9 @@ data/raw/                 Kaggle datasets (gitignored — see setup instructions
 | `make db-down`  | Stop PostgreSQL container                   |
 | `make test`     | Run pytest                                  |
 | `make lint`     | Run ruff linter                             |
-| `make pipeline` | Run full ETL pipeline (placeholder)         |
+| `make pipeline` | Run full ETL pipeline (ingest + dbt + test)  |
+| `make pipeline-ingest` | Ingestion only (CSV → PostgreSQL)      |
+| `make pipeline-dbt` | dbt only (transform + test)               |
 
 ## Tech Stack
 

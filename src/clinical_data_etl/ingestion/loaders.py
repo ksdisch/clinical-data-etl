@@ -131,7 +131,8 @@ def load_to_postgres(
     engine = get_engine()
     with engine.connect() as conn:
         conn.execute(text(f"CREATE SCHEMA IF NOT EXISTS {schema}"))
-        # CASCADE drops dependent views (dbt staging views) which get recreated by dbt run
+        # CASCADE drops dependent views (dbt staging views)
+        # which get recreated by dbt run
         conn.execute(text(f"DROP TABLE IF EXISTS {schema}.{table_name} CASCADE"))
         conn.commit()
 
@@ -177,7 +178,8 @@ def run_ingestion() -> dict[str, dict[str, int]]:
     print(f"\n{'='*50}")
     print("Ingestion complete!")
     for table_name, counts in summary.items():
-        print(f"  raw.{table_name}: {counts['loaded']} loaded, {counts['rejected']} rejected")
+        loaded, rejected = counts["loaded"], counts["rejected"]
+        print(f"  raw.{table_name}: {loaded} loaded, {rejected} rejected")
 
     return summary
 

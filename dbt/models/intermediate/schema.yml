@@ -9,8 +9,30 @@ models:
     columns:
       - name: claim_id
         description: "Unique claim identifier across both claim types"
+        tests:
+          - unique
+          - not_null
+      - name: bene_id
+        description: "Beneficiary ID (FK to stg_beneficiary)"
+        tests:
+          - not_null
+      - name: provider_id
+        description: "Provider ID (FK to stg_providers)"
+        tests:
+          - not_null
       - name: claim_type
         description: "'inpatient' or 'outpatient'"
+        tests:
+          - accepted_values:
+              values: ['inpatient', 'outpatient']
+      - name: claim_start_date
+        description: "Claim start date"
+        tests:
+          - not_null
+      - name: reimbursement_amount
+        description: "Claim reimbursement amount"
+        tests:
+          - not_null
 
   - name: int_claims_enriched
     description: >
@@ -20,5 +42,12 @@ models:
     columns:
       - name: claim_id
         description: "Unique claim identifier"
+        tests:
+          - unique
+          - not_null
       - name: age_at_claim
         description: "Beneficiary age in years at claim_start_date"
+      - name: claim_start_date
+        description: "Claim start date — must be on or before claim_end_date"
+        tests:
+          - not_null
