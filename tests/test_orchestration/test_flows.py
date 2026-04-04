@@ -17,10 +17,10 @@ class TestPipelineFlow:
         mock_dbt_run.return_value = "PASS=9"
         mock_dbt_test.return_value = "PASS=28"
         mock_validate.return_value = {
-                "fct_claims": 500,
-                "dim_beneficiary": 100,
-                "dim_provider": 50,
-            }
+            "fct_claims": 500,
+            "dim_beneficiary": 100,
+            "dim_provider": 50,
+        }
 
         result = pipeline_flow(run_ingestion=True, run_dbt=True)
 
@@ -43,10 +43,10 @@ class TestPipelineFlow:
 
         mock_ingest.return_value = {"beneficiary": {"loaded": 100, "rejected": 0}}
         mock_validate.return_value = {
-                "fct_claims": 500,
-                "dim_beneficiary": 100,
-                "dim_provider": 50,
-            }
+            "fct_claims": 500,
+            "dim_beneficiary": 100,
+            "dim_provider": 50,
+        }
 
         result = pipeline_flow(run_ingestion=True, run_dbt=False)
 
@@ -69,10 +69,10 @@ class TestPipelineFlow:
         mock_dbt_run.return_value = "PASS=9"
         mock_dbt_test.return_value = "PASS=28"
         mock_validate.return_value = {
-                "fct_claims": 500,
-                "dim_beneficiary": 100,
-                "dim_provider": 50,
-            }
+            "fct_claims": 500,
+            "dim_beneficiary": 100,
+            "dim_provider": 50,
+        }
 
         result = pipeline_flow(run_ingestion=False, run_dbt=True)
 

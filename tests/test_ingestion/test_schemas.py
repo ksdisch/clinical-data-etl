@@ -197,10 +197,12 @@ def test_provider_valid_with_null_fraud_label():
 
 
 def test_provider_rejects_duplicate_provider():
-    df = pd.DataFrame([
-        {"Provider": "PRV0001", "PotentialFraud": "Yes"},
-        {"Provider": "PRV0001", "PotentialFraud": "No"},
-    ])
+    df = pd.DataFrame(
+        [
+            {"Provider": "PRV0001", "PotentialFraud": "Yes"},
+            {"Provider": "PRV0001", "PotentialFraud": "No"},
+        ]
+    )
     with pytest.raises(pa.errors.SchemaErrors):
         ProviderSchema.validate(df, lazy=True)
 

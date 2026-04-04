@@ -154,9 +154,9 @@ def run_ingestion() -> dict[str, dict[str, int]]:
     summary: dict[str, dict[str, int]] = {}
 
     for table_name, (_, _, schema) in TABLE_CONFIG.items():
-        print(f"\n{'='*50}")
+        print(f"\n{'=' * 50}")
         print(f"Processing: {table_name}")
-        print(f"{'='*50}")
+        print(f"{'=' * 50}")
 
         print("  Loading and merging Train/Test CSVs...")
         df = load_and_merge(table_name)
@@ -175,7 +175,7 @@ def run_ingestion() -> dict[str, dict[str, int]]:
             "rejected": len(rejected_df),
         }
 
-    print(f"\n{'='*50}")
+    print(f"\n{'=' * 50}")
     print("Ingestion complete!")
     for table_name, counts in summary.items():
         loaded, rejected = counts["loaded"], counts["rejected"]

@@ -11,9 +11,13 @@ from clinical_data_etl.ingestion.loaders import (
 )
 from clinical_data_etl.ingestion.schemas import ProviderSchema
 
+# True when the Kaggle CSVs have been downloaded locally
+_HAS_RAW_DATA = any(DATA_DIR.glob("Train_Beneficiary*.csv"))
+
 # ── load_and_merge ───────────────────────────────────────────────────
 
 
+@pytest.mark.skipif(not _HAS_RAW_DATA, reason="Kaggle CSVs not downloaded")
 class TestLoadAndMerge:
     def test_beneficiary_merges_train_test(self):
         df = load_and_merge("beneficiary")
@@ -59,19 +63,25 @@ class TestLoadAndMerge:
 
 class TestValidate:
     def test_valid_data_passes(self):
-        df = pd.DataFrame([{
-            "Provider": "PRV0001",
-            "PotentialFraud": "Yes",
-        }])
+        df = pd.DataFrame(
+            [
+                {
+                    "Provider": "PRV0001",
+                    "PotentialFraud": "Yes",
+                }
+            ]
+        )
         valid, rejected = validate(df, ProviderSchema, "test_providers")
         assert len(valid) == 1
         assert len(rejected) == 0
 
     def test_invalid_rows_rejected(self):
-        df = pd.DataFrame([
-            {"Provider": "PRV0001", "PotentialFraud": "Yes"},
-            {"Provider": "PRV0001", "PotentialFraud": "No"},  # Duplicate
-        ])
+        df = pd.DataFrame(
+            [
+                {"Provider": "PRV0001", "PotentialFraud": "Yes"},
+                {"Provider": "PRV0001", "PotentialFraud": "No"},  # Duplicate
+            ]
+        )
         valid, rejected = validate(df, ProviderSchema, "test_providers")
         # Unique constraint should cause rejection
         assert len(valid) + len(rejected) <= 2
@@ -88,6 +98,7 @@ class TestIngestionIntegration:
         """Skip if PostgreSQL is not available."""
         try:
             from clinical_data_etl.utils.db import test_connection
+
             test_connection()
         except Exception:
             pytest.skip("PostgreSQL not available — run `make db-up`")
@@ -110,9 +121,7 @@ class TestIngestionIntegration:
         engine = get_engine()
         with engine.connect() as conn:
             for table_name, counts in summary.items():
-                result = conn.execute(
-                    text(f"SELECT COUNT(*) FROM raw.{table_name}")
-                )
+                result = conn.execute(text(f"SELECT COUNT(*) FROM raw.{table_name}"))
                 db_count = result.scalar()
                 assert db_count == counts["loaded"], (
                     f"raw.{table_name}: expected {counts['loaded']}, got {db_count}"

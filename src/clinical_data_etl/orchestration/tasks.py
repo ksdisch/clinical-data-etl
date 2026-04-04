@@ -109,9 +109,7 @@ def validate_marts_task() -> dict[str, int]:
 
     with engine.connect() as conn:
         for table in mart_tables:
-            result = conn.execute(
-                text(f"SELECT COUNT(*) FROM raw_marts.{table}")
-            )
+            result = conn.execute(text(f"SELECT COUNT(*) FROM raw_marts.{table}"))
             count = result.scalar() or 0
             row_counts[table] = count
             logger.info("raw_marts.%s: %d rows", table, count)
