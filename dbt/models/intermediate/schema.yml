@@ -24,7 +24,8 @@ models:
         description: "'inpatient' or 'outpatient'"
         tests:
           - accepted_values:
-              values: ['inpatient', 'outpatient']
+              arguments:
+                values: ['inpatient', 'outpatient']
       - name: claim_start_date
         description: "Claim start date"
         tests:

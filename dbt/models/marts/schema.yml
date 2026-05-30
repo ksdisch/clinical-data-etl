@@ -16,21 +16,24 @@ models:
         tests:
           - not_null
           - relationships:
-              to: ref('dim_beneficiary')
-              field: bene_id
+              arguments:
+                to: ref('dim_beneficiary')
+                field: bene_id
               config:
                 severity: warn  # 30 beneficiaries rejected by pandera validation
       - name: provider_id
         tests:
           - not_null
           - relationships:
-              to: ref('dim_provider')
-              field: provider_id
+              arguments:
+                to: ref('dim_provider')
+                field: provider_id
       - name: claim_type
         description: "'inpatient' or 'outpatient' — source table indicator"
         tests:
           - accepted_values:
-              values: ['inpatient', 'outpatient']
+              arguments:
+                values: ['inpatient', 'outpatient']
       - name: claim_start_date
         description: "First date of the claim period"
       - name: claim_end_date

@@ -46,8 +46,8 @@ Location: `data/raw/synthetic_hospital/`
 | pandas       | Data manipulation        | 2.x           |
 | pandera      | Schema validation        | 0.18+         |
 | PostgreSQL   | Data warehouse           | 16 (Docker)   |
-| dbt-core     | Transformation layer     | 1.7+          |
-| dbt-postgres | dbt adapter              | 1.7+          |
+| dbt-core     | Transformation layer     | 1.10+         |
+| dbt-postgres | dbt adapter              | 1.10+         |
 | Prefect      | Orchestration            | 2.x           |
 | Docker       | PostgreSQL hosting       | -             |
 | pytest       | Testing                  | 8.x           |

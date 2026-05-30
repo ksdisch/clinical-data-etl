@@ -15,11 +15,13 @@ models:
       - name: gender
         tests:
           - accepted_values:
-              values: ['Male', 'Female']
+              arguments:
+                values: ['Male', 'Female']
       - name: race
         tests:
           - accepted_values:
-              values: ['White', 'Black', 'Other', 'Hispanic', 'Unknown']
+              arguments:
+                values: ['White', 'Black', 'Other', 'Hispanic', 'Unknown']
 
   - name: stg_inpatient_claims
     description: "Cleaned inpatient claims with dates cast, duration computed, columns renamed."
@@ -38,7 +40,8 @@ models:
       - name: claim_type
         tests:
           - accepted_values:
-              values: ['inpatient']
+              arguments:
+                values: ['inpatient']
       - name: reimbursement_amount
         description: "Claim reimbursement amount (>= 0)"
 
@@ -59,7 +62,8 @@ models:
       - name: claim_type
         tests:
           - accepted_values:
-              values: ['outpatient']
+              arguments:
+                values: ['outpatient']
 
   - name: stg_providers
     description: "Provider list with fraud label mapped to boolean."
