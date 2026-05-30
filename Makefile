@@ -1,7 +1,7 @@
 .PHONY: setup download-data db-up db-down test lint pipeline pipeline-ingest pipeline-dbt
 
 setup:
-	python3.12 -m venv .venv
+	python3 -m venv .venv
 	.venv/bin/pip install --upgrade pip
 	.venv/bin/pip install -e ".[dev]"
 

@@ -27,9 +27,26 @@ models:
               to: ref('dim_provider')
               field: provider_id
       - name: claim_type
+        description: "'inpatient' or 'outpatient' — source table indicator"
         tests:
           - accepted_values:
               values: ['inpatient', 'outpatient']
+      - name: claim_start_date
+        description: "First date of the claim period"
+      - name: claim_end_date
+        description: "Last date of the claim period"
+      - name: admission_date
+        description: "Hospital admission date. NULL for outpatient claims."
+      - name: discharge_date
+        description: "Hospital discharge date. NULL for outpatient claims."
+      - name: claim_duration_days
+        description: "claim_end_date minus claim_start_date in days. NULL for outpatient claims."
+      - name: reimbursement_amount
+        description: "Total Medicare reimbursement for this claim"
+      - name: deductible_amount
+        description: "Deductible amount applied to this claim"
+      - name: age_at_claim
+        description: "Beneficiary age in whole years at claim_start_date"
 
   - name: dim_beneficiary
     description: >
@@ -41,8 +58,44 @@ models:
         tests:
           - unique
           - not_null
+      - name: date_of_birth
+        description: "Beneficiary date of birth"
+      - name: date_of_death
+        description: "Date of death. NULL if beneficiary is alive."
+      - name: gender
+        description: "'Male' or 'Female' (recoded from source 1/2 in stg_beneficiary)"
+      - name: race
+        description: "Race category: 'White', 'Black', 'Other', 'Hispanic', or 'Unknown' (recoded from source codes in stg_beneficiary)"
+      - name: renal_disease_indicator
+        description: "Source pass-through: 'Y' if end-stage renal disease, '0' otherwise"
+      - name: has_alzheimers
+        description: "Boolean — true if the beneficiary has this chronic condition (recoded from source 1=yes/2=no in stg_beneficiary)"
+      - name: has_heart_failure
+        description: "Boolean — true if the beneficiary has this chronic condition (recoded from source 1=yes/2=no in stg_beneficiary)"
+      - name: has_kidney_disease
+        description: "Boolean — true if the beneficiary has this chronic condition (recoded from source 1=yes/2=no in stg_beneficiary)"
+      - name: has_cancer
+        description: "Boolean — true if the beneficiary has this chronic condition (recoded from source 1=yes/2=no in stg_beneficiary)"
+      - name: has_obstr_pulmonary
+        description: "Boolean — true if the beneficiary has this chronic condition (recoded from source 1=yes/2=no in stg_beneficiary)"
+      - name: has_depression
+        description: "Boolean — true if the beneficiary has this chronic condition (recoded from source 1=yes/2=no in stg_beneficiary)"
+      - name: has_diabetes
+        description: "Boolean — true if the beneficiary has this chronic condition (recoded from source 1=yes/2=no in stg_beneficiary)"
+      - name: has_ischemic_heart
+        description: "Boolean — true if the beneficiary has this chronic condition (recoded from source 1=yes/2=no in stg_beneficiary)"
+      - name: has_osteoporosis
+        description: "Boolean — true if the beneficiary has this chronic condition (recoded from source 1=yes/2=no in stg_beneficiary)"
+      - name: has_rheumatoid_arthritis
+        description: "Boolean — true if the beneficiary has this chronic condition (recoded from source 1=yes/2=no in stg_beneficiary)"
+      - name: has_stroke
+        description: "Boolean — true if the beneficiary has this chronic condition (recoded from source 1=yes/2=no in stg_beneficiary)"
       - name: chronic_condition_count
-        description: "Count of chronic conditions (0-11)"
+        description: "Count of the 11 has_* boolean flags that are true (0–11)"
+      - name: total_ip_reimbursement
+        description: "Annual Medicare inpatient reimbursement total for this beneficiary"
+      - name: total_op_reimbursement
+        description: "Annual Medicare outpatient reimbursement total for this beneficiary"
 
   - name: dim_provider
     description: >
@@ -57,3 +110,11 @@ models:
           - not_null
       - name: is_potential_fraud
         description: "Fraud label from training data. NULL for test-split providers."
+      - name: total_claims
+        description: "Count of distinct claims linked to this provider across both claim types"
+      - name: total_reimbursement
+        description: "Sum of reimbursement_amount across all claims linked to this provider"
+      - name: unique_beneficiaries
+        description: "Count of distinct beneficiaries who had at least one claim with this provider"
+      - name: avg_reimbursement_per_claim
+        description: "total_reimbursement / total_claims, rounded to 2 decimal places"

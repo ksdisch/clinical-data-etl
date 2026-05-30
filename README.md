@@ -4,6 +4,8 @@ A multi-source clinical data ETL pipeline that ingests Medicare claims fraud det
 
 Built as a portfolio project for Data Engineering / Analytics Engineering roles.
 
+[![CI](https://github.com/ksdisch/clinical-data-etl/actions/workflows/ci.yml/badge.svg)](https://github.com/ksdisch/clinical-data-etl/actions/workflows/ci.yml)
+
 ## Architecture
 
 ```
@@ -190,7 +192,8 @@ data/raw/                 Kaggle datasets (gitignored — see setup instructions
 - **Prefect** — workflow orchestration
 - **pytest, ruff, mypy** — testing and code quality
 
-## Phase 2 Extensions
+## Roadmap
 
-- **Diabetes Readmission** (`data/raw/diabetes_readmission/`): 70K+ inpatient encounters with 55 features and readmission outcome. Source: Kaggle `brandao/diabetes`.
-- **Synthetic Hospital** (`data/raw/synthetic_hospital/`): Lightweight test dataset. Source: Kaggle `amulyas/synthetic-hospital-data`.
+MVP complete as of April 2026. The pipeline ingests 848K rows end-to-end in ~36 seconds, passes 34 pytest tests and 28 dbt tests.
+
+Phase 2 (deferred): integrate the diabetes readmission dataset (`brandao/diabetes`, 70K encounters, 55 features) as a second fact table. The raw directory placeholder (`data/raw/diabetes_readmission/`) is already in place.

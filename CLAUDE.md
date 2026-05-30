@@ -34,7 +34,7 @@ Location: `data/raw/diabetes_readmission/`
 - `diabetic_data.csv` — 70K+ inpatient encounters, 55 features, readmission outcome
 
 **TERTIARY — Synthetic Hospital**
-Source: Kaggle `amulyas/synth-hospital-data`
+Source: Kaggle `amulyas/synthetic-hospital-data`
 Location: `data/raw/synthetic_hospital/`
 - `HospitalSynthetic1.csv` — Lightweight dataset for testing and development
 
@@ -88,7 +88,7 @@ PostgreSQL raw schema
 dbt Transforms
   ├── staging   (stg_beneficiary, stg_inpatient_claims,
   │              stg_outpatient_claims, stg_providers)
-  ├── intermediate (int_claims_joined, int_beneficiary_enriched)
+  ├── intermediate (int_claims_unified, int_claims_enriched)
   └── marts     (fct_claims, dim_beneficiary, dim_provider)
   │
   ▼
@@ -126,7 +126,8 @@ clinical-data-etl/
 │       │   └── schemas.py
 │       ├── orchestration/  # Prefect flows and tasks
 │       │   ├── __init__.py
-│       │   └── flows.py
+│       │   ├── flows.py
+│       │   └── tasks.py
 │       └── utils/          # DB connections, config, shared helpers
 │           ├── __init__.py
 │           └── db.py
