@@ -241,6 +241,6 @@ data/raw/                 Kaggle datasets (gitignored — see setup instructions
 
 ## Roadmap
 
-MVP complete as of April 2026. The pipeline ingests 848K rows end-to-end in ~36 seconds, passes 34 pytest tests and 28 dbt tests.
+MVP complete as of April 2026. The pipeline ingests 848K rows end-to-end in ~36 seconds, passes 34 pytest tests and 41 dbt tests (40 pass, 1 expected warn on the orphan-claims relationship).
 
 Phase 2 (deferred): integrate the diabetes readmission dataset (`brandao/diabetes`, 70K encounters, 55 features) as a second fact table. The raw directory placeholder (`data/raw/diabetes_readmission/`) is already in place.

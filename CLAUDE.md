@@ -177,8 +177,8 @@ clinical-data-etl/
 **MVP Complete — Pipeline runs end-to-end.** Next: polish README, add dbt docs, consider Phase 2 (diabetes readmission dataset).
 
 ### What works now
-- `make pipeline` — full end-to-end: ingest 848K rows → dbt run (9 models) → dbt test (28 tests) → validate marts (~36s)
+- `make pipeline` — full end-to-end: ingest 848K rows → dbt run (9 models) → dbt test (41 tests) → validate marts (~36s)
 - `make pipeline-ingest` — ingestion only
 - `make pipeline-dbt` — dbt only (skip ingestion)
 - `python -m clinical_data_etl [--ingest-only | --dbt-only | --full]`
-- 34 pytest tests pass, 28 dbt tests pass (1 warn)
+- 34 pytest tests pass, 41 dbt tests pass (40 pass, 1 warn)
