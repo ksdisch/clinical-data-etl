@@ -1,6 +1,7 @@
 """Prefect flows for pipeline orchestration."""
 
 import time
+from typing import Any
 
 from prefect import flow, get_run_logger
 
@@ -16,7 +17,7 @@ from clinical_data_etl.orchestration.tasks import (
 def pipeline_flow(
     run_ingestion: bool = True,
     run_dbt: bool = True,
-) -> dict:
+) -> dict[str, Any]:
     """End-to-end clinical data ETL pipeline.
 
     Args:
@@ -25,7 +26,7 @@ def pipeline_flow(
     """
     logger = get_run_logger()
     start = time.time()
-    summary: dict = {}
+    summary: dict[str, Any] = {}
 
     if run_ingestion:
         logger.info("Step 1/4: Ingesting claims data...")

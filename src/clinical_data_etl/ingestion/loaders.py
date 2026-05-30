@@ -4,7 +4,7 @@ from pathlib import Path
 
 import pandas as pd
 import pandera as pa
-from pandera import DataFrameSchema
+from pandera.pandas import DataFrameSchema
 from sqlalchemy import text
 
 from clinical_data_etl.ingestion.schemas import (

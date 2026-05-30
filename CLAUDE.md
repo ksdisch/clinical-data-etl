@@ -34,7 +34,7 @@ Location: `data/raw/diabetes_readmission/`
 - `diabetic_data.csv` — 70K+ inpatient encounters, 55 features, readmission outcome
 
 **TERTIARY — Synthetic Hospital**
-Source: Kaggle `amulyas/synth-hospital-data`
+Source: Kaggle `amulyas/synthetic-hospital-data`
 Location: `data/raw/synthetic_hospital/`
 - `HospitalSynthetic1.csv` — Lightweight dataset for testing and development
 
@@ -46,8 +46,8 @@ Location: `data/raw/synthetic_hospital/`
 | pandas       | Data manipulation        | 2.x           |
 | pandera      | Schema validation        | 0.18+         |
 | PostgreSQL   | Data warehouse           | 16 (Docker)   |
-| dbt-core     | Transformation layer     | 1.7+          |
-| dbt-postgres | dbt adapter              | 1.7+          |
+| dbt-core     | Transformation layer     | 1.10+         |
+| dbt-postgres | dbt adapter              | 1.10+         |
 | Prefect      | Orchestration            | 2.x           |
 | Docker       | PostgreSQL hosting       | -             |
 | pytest       | Testing                  | 8.x           |
@@ -88,7 +88,7 @@ PostgreSQL raw schema
 dbt Transforms
   ├── staging   (stg_beneficiary, stg_inpatient_claims,
   │              stg_outpatient_claims, stg_providers)
-  ├── intermediate (int_claims_joined, int_beneficiary_enriched)
+  ├── intermediate (int_claims_unified, int_claims_enriched)
   └── marts     (fct_claims, dim_beneficiary, dim_provider)
   │
   ▼
@@ -126,7 +126,8 @@ clinical-data-etl/
 │       │   └── schemas.py
 │       ├── orchestration/  # Prefect flows and tasks
 │       │   ├── __init__.py
-│       │   └── flows.py
+│       │   ├── flows.py
+│       │   └── tasks.py
 │       └── utils/          # DB connections, config, shared helpers
 │           ├── __init__.py
 │           └── db.py
@@ -176,8 +177,8 @@ clinical-data-etl/
 **MVP Complete — Pipeline runs end-to-end.** Next: polish README, add dbt docs, consider Phase 2 (diabetes readmission dataset).
 
 ### What works now
-- `make pipeline` — full end-to-end: ingest 848K rows → dbt run (9 models) → dbt test (28 tests) → validate marts (~36s)
+- `make pipeline` — full end-to-end: ingest 848K rows → dbt run (9 models) → dbt test (41 tests) → validate marts (~36s)
 - `make pipeline-ingest` — ingestion only
 - `make pipeline-dbt` — dbt only (skip ingestion)
 - `python -m clinical_data_etl [--ingest-only | --dbt-only | --full]`
-- 34 pytest tests pass, 28 dbt tests pass (1 warn)
+- 34 pytest tests pass, 41 dbt tests pass (40 pass, 1 warn)

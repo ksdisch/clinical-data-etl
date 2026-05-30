@@ -4,6 +4,8 @@ A multi-source clinical data ETL pipeline that ingests Medicare claims fraud det
 
 Built as a portfolio project for Data Engineering / Analytics Engineering roles.
 
+[![CI](https://github.com/ksdisch/clinical-data-etl/actions/workflows/ci.yml/badge.svg)](https://github.com/ksdisch/clinical-data-etl/actions/workflows/ci.yml)
+
 ## Architecture
 
 ```
@@ -101,6 +103,49 @@ Built as a portfolio project for Data Engineering / Analytics Engineering roles.
 └─────────────────────────────┘
 ```
 
+## Data Lineage
+
+The dbt project builds 9 models across three layers. Run `make dbt-docs` to generate and serve the interactive lineage graph; the same dependency structure is shown below.
+
+```mermaid
+flowchart LR
+    subgraph raw["raw schema (PostgreSQL)"]
+        r_bene[(beneficiary)]
+        r_inp[(inpatient_claims)]
+        r_outp[(outpatient_claims)]
+        r_prov[(providers)]
+    end
+    subgraph staging
+        s_bene[stg_beneficiary]
+        s_inp[stg_inpatient_claims]
+        s_outp[stg_outpatient_claims]
+        s_prov[stg_providers]
+    end
+    subgraph intermediate
+        i_uni[int_claims_unified]
+        i_enr[int_claims_enriched]
+    end
+    subgraph marts
+        m_fct[fct_claims]
+        m_bene[dim_beneficiary]
+        m_prov[dim_provider]
+    end
+
+    r_bene --> s_bene
+    r_inp --> s_inp
+    r_outp --> s_outp
+    r_prov --> s_prov
+
+    s_inp --> i_uni
+    s_outp --> i_uni
+    i_uni --> i_enr
+    s_bene --> i_enr
+    i_enr --> m_fct
+    s_bene --> m_bene
+    s_prov --> m_prov
+    i_uni --> m_prov
+```
+
 ## Prerequisites
 
 - Python 3.11+
@@ -127,6 +172,8 @@ pip install -e ".[dev]"
 ```
 
 ### 2. Download data
+
+> Requires Kaggle API credentials: place your `kaggle.json` token at `~/.kaggle/kaggle.json` and run `chmod 600 ~/.kaggle/kaggle.json`. See the [Kaggle API docs](https://github.com/Kaggle/kaggle-api#api-credentials).
 
 ```bash
 make download-data
@@ -181,6 +228,8 @@ data/raw/                 Kaggle datasets (gitignored — see setup instructions
 | `make pipeline` | Run full ETL pipeline (ingest + dbt + test)  |
 | `make pipeline-ingest` | Ingestion only (CSV → PostgreSQL)      |
 | `make pipeline-dbt` | dbt only (transform + test)               |
+| `make dbt-compile` | Compile dbt models (validate SQL, no DB writes) |
+| `make dbt-docs` | Generate and serve dbt docs + lineage graph     |
 
 ## Tech Stack
 
@@ -190,7 +239,8 @@ data/raw/                 Kaggle datasets (gitignored — see setup instructions
 - **Prefect** — workflow orchestration
 - **pytest, ruff, mypy** — testing and code quality
 
-## Phase 2 Extensions
+## Roadmap
 
-- **Diabetes Readmission** (`data/raw/diabetes_readmission/`): 70K+ inpatient encounters with 55 features and readmission outcome. Source: Kaggle `brandao/diabetes`.
-- **Synthetic Hospital** (`data/raw/synthetic_hospital/`): Lightweight test dataset. Source: Kaggle `amulyas/synthetic-hospital-data`.
+MVP complete as of April 2026. The pipeline ingests 848K rows end-to-end in ~36 seconds, passes 34 pytest tests and 41 dbt tests (40 pass, 1 expected warn on the orphan-claims relationship).
+
+Phase 2 (deferred): integrate the diabetes readmission dataset (`brandao/diabetes`, 70K encounters, 55 features) as a second fact table. The raw directory placeholder (`data/raw/diabetes_readmission/`) is already in place.

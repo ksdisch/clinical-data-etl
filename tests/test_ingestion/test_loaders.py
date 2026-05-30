@@ -90,8 +90,9 @@ class TestValidate:
 # ── Integration (requires Docker PostgreSQL) ─────────────────────────
 
 
+@pytest.mark.skipif(not _HAS_RAW_DATA, reason="Kaggle CSVs not downloaded")
 class TestIngestionIntegration:
-    """End-to-end tests that require a running PostgreSQL instance."""
+    """End-to-end tests that require a running PostgreSQL instance and raw CSVs."""
 
     @pytest.fixture(autouse=True)
     def _check_db(self):
