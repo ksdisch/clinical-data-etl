@@ -103,6 +103,49 @@ Built as a portfolio project for Data Engineering / Analytics Engineering roles.
 └─────────────────────────────┘
 ```
 
+## Data Lineage
+
+The dbt project builds 9 models across three layers. Run `make dbt-docs` to generate and serve the interactive lineage graph; the same dependency structure is shown below.
+
+```mermaid
+flowchart LR
+    subgraph raw["raw schema (PostgreSQL)"]
+        r_bene[(beneficiary)]
+        r_inp[(inpatient_claims)]
+        r_outp[(outpatient_claims)]
+        r_prov[(providers)]
+    end
+    subgraph staging
+        s_bene[stg_beneficiary]
+        s_inp[stg_inpatient_claims]
+        s_outp[stg_outpatient_claims]
+        s_prov[stg_providers]
+    end
+    subgraph intermediate
+        i_uni[int_claims_unified]
+        i_enr[int_claims_enriched]
+    end
+    subgraph marts
+        m_fct[fct_claims]
+        m_bene[dim_beneficiary]
+        m_prov[dim_provider]
+    end
+
+    r_bene --> s_bene
+    r_inp --> s_inp
+    r_outp --> s_outp
+    r_prov --> s_prov
+
+    s_inp --> i_uni
+    s_outp --> i_uni
+    i_uni --> i_enr
+    s_bene --> i_enr
+    i_enr --> m_fct
+    s_bene --> m_bene
+    s_prov --> m_prov
+    i_uni --> m_prov
+```
+
 ## Prerequisites
 
 - Python 3.11+
@@ -129,6 +172,8 @@ pip install -e ".[dev]"
 ```
 
 ### 2. Download data
+
+> Requires Kaggle API credentials: place your `kaggle.json` token at `~/.kaggle/kaggle.json` and run `chmod 600 ~/.kaggle/kaggle.json`. See the [Kaggle API docs](https://github.com/Kaggle/kaggle-api#api-credentials).
 
 ```bash
 make download-data
@@ -183,6 +228,8 @@ data/raw/                 Kaggle datasets (gitignored — see setup instructions
 | `make pipeline` | Run full ETL pipeline (ingest + dbt + test)  |
 | `make pipeline-ingest` | Ingestion only (CSV → PostgreSQL)      |
 | `make pipeline-dbt` | dbt only (transform + test)               |
+| `make dbt-compile` | Compile dbt models (validate SQL, no DB writes) |
+| `make dbt-docs` | Generate and serve dbt docs + lineage graph     |
 
 ## Tech Stack
 

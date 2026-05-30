@@ -3,8 +3,33 @@ version: 2
 sources:
   - name: raw
     schema: raw
+    description: >
+      Medicare provider fraud-detection data ingested from Kaggle
+      (rohitrox/healthcare-provider-fraud-detection-analysis). Train and test
+      CSV splits are merged at ingestion time into one table per entity. Row
+      counts below are approximate merged train+test totals from the source
+      CSVs, before pandera validation rejects are quarantined to
+      data/rejected/.
     tables:
       - name: beneficiary
+        description: >
+          Medicare beneficiary demographics: DOB/DOD, gender, race,
+          state/county, Part A/B coverage months, 11 chronic-condition flags
+          (1=yes / 2=no in source), and annual inpatient/outpatient
+          reimbursement & deductible totals. ~203K rows (merged train+test).
       - name: inpatient_claims
+        description: >
+          Inpatient claim records: admission/discharge dates, attending and
+          operating physicians, admit diagnosis, up to 10 diagnosis codes, and
+          up to 6 procedure codes, plus reimbursement & deductible amounts.
+          ~50K rows (merged train+test).
       - name: outpatient_claims
+        description: >
+          Outpatient claim records. Same structure as inpatient minus
+          admission/discharge dates and diagnosis_group_code. ~644K rows
+          (merged train+test).
       - name: providers
+        description: >
+          Provider list keyed by provider_id with the PotentialFraud label.
+          Test-split providers (Test-*.csv) have no PotentialFraud column and
+          are loaded with a NULL fraud flag. ~6.8K rows (merged train+test).

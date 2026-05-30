@@ -1,4 +1,4 @@
-.PHONY: setup download-data db-up db-down test lint pipeline pipeline-ingest pipeline-dbt
+.PHONY: setup download-data db-up db-down test lint pipeline pipeline-ingest pipeline-dbt dbt-compile dbt-docs
 
 setup:
 	python3 -m venv .venv
@@ -30,3 +30,10 @@ pipeline-ingest:
 
 pipeline-dbt:
 	.venv/bin/python -m clinical_data_etl --dbt-only
+
+dbt-compile:
+	.venv/bin/dbt compile --profiles-dir dbt --project-dir dbt
+
+dbt-docs:
+	.venv/bin/dbt docs generate --profiles-dir dbt --project-dir dbt
+	.venv/bin/dbt docs serve --profiles-dir dbt --project-dir dbt
