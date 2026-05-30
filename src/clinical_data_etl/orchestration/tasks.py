@@ -4,6 +4,7 @@ import logging
 import subprocess
 import sys
 from pathlib import Path
+from typing import Any
 
 from prefect import get_run_logger, task
 from sqlalchemy import text
@@ -17,7 +18,7 @@ DBT_PROFILES_DIR = DBT_DIR
 _fallback_logger = logging.getLogger(__name__)
 
 
-def _get_logger() -> logging.Logger:
+def _get_logger() -> logging.Logger | logging.LoggerAdapter[Any]:
     """Get Prefect run logger if in a flow/task context, else stdlib logger."""
     try:
         return get_run_logger()

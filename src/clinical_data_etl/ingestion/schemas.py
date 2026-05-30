@@ -1,7 +1,7 @@
 """Pandera schemas for claims_fraud dataset validation."""
 
-import pandera as pa
-from pandera import Column, DataFrameSchema
+import pandera.pandas as pa
+from pandera.pandas import Column, DataFrameSchema
 
 # --- Chronic condition columns (all int, values 1 or 2) ---
 _CHRONIC_CONDITION_COLS = [
