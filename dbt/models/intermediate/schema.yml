@@ -52,3 +52,27 @@ models:
         description: "Claim start date — must be on or before claim_end_date"
         tests:
           - not_null
+
+  - name: int_encounters_enriched
+    description: >
+      Diabetes encounters (SECONDARY source) with derived analytical features:
+      num_prior_visits (outpatient + emergency + inpatient) and num_diabetes_meds
+      (count of the 23 tracked drugs actively prescribed). One row per encounter.
+    columns:
+      - name: encounter_id
+        description: "Unique encounter identifier"
+        tests:
+          - unique
+          - not_null
+      - name: patient_nbr
+        description: "Patient identifier (FK to dim_patient)"
+        tests:
+          - not_null
+      - name: num_prior_visits
+        description: "Sum of prior outpatient, emergency, and inpatient visits"
+      - name: num_diabetes_meds
+        description: "Count of the 23 tracked medications not set to 'No' (0–23)"
+      - name: is_readmitted_30d
+        description: "True when the patient was readmitted within 30 days"
+        tests:
+          - not_null
