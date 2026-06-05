@@ -75,3 +75,36 @@ models:
           - not_null
       - name: is_potential_fraud
         description: "Fraud label from training data. NULL for test-split providers."
+
+  - name: stg_diabetes_encounters
+    description: >
+      Cleaned diabetes-readmission encounters (SECONDARY source). One row per
+      hospital encounter with snake_case columns, '?' recoded to NULL upstream,
+      medication columns de-hyphenated, and boolean derivations for med change,
+      diabetes medication, and 30-day readmission.
+    columns:
+      - name: encounter_id
+        description: "Unique encounter identifier (grain of the diabetes star)"
+        tests:
+          - unique
+          - not_null
+      - name: patient_nbr
+        description: "Patient identifier — repeats across a patient's encounters"
+        tests:
+          - not_null
+      - name: gender
+        tests:
+          - accepted_values:
+              arguments:
+                values: ['Female', 'Male', 'Unknown/Invalid']
+      - name: readmitted_status
+        description: "3-class readmission outcome from source"
+        tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ['NO', '>30', '<30']
+      - name: is_readmitted_30d
+        description: "True when readmitted_status = '<30' (analytical target)"
+        tests:
+          - not_null
