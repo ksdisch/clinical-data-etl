@@ -12,6 +12,7 @@ from sqlalchemy.engine import Connection
 
 from clinical_data_etl.ingestion.schemas import (
     BeneficiarySchema,
+    DiabetesEncounterSchema,
     InpatientClaimSchema,
     OutpatientClaimSchema,
     ProviderSchema,
@@ -22,6 +23,12 @@ PROJECT_ROOT = Path(__file__).resolve().parents[3]
 DATA_DIR = PROJECT_ROOT / "data" / "raw" / "claims_fraud"
 REJECTED_DIR = PROJECT_ROOT / "data" / "rejected"
 
+# --- Secondary source: diabetes readmission (single CSV, no train/test split) ---
+DIABETES_DATA_DIR = PROJECT_ROOT / "data" / "raw" / "diabetes_readmission"
+DIABETES_CSV_GLOB = "diabetic_data.csv"
+DIABETES_TABLE = "diabetes_encounters"
+DIABETES_MISSING_SENTINEL = "?"
+
 # Natural key per logical table — the column (as named in the merged DataFrame)
 # that uniquely identifies a row and backs the idempotent ON CONFLICT upsert.
 NATURAL_KEYS: dict[str, str] = {
@@ -29,6 +36,7 @@ NATURAL_KEYS: dict[str, str] = {
     "inpatient_claims": "ClaimID",
     "outpatient_claims": "ClaimID",
     "providers": "Provider",
+    DIABETES_TABLE: "encounter_id",
 }
 
 # Audit column stamped on every loaded row. It records FIRST-seen time and is
@@ -101,6 +109,32 @@ def load_and_merge(table_name: str) -> pd.DataFrame:
             print(f"  Deduplicated: removed {dupes} duplicate {key}s")
 
     return merged
+
+
+def clean_diabetes_frame(df: pd.DataFrame) -> pd.DataFrame:
+    """Recode the diabetes dataset's '?' missing sentinel to NA.
+
+    The UCI diabetes CSV encodes missing categorical values as the literal
+    string ``?`` (e.g. race, weight, payer_code, medical_specialty, diag_*).
+    pandera's ``nullable`` checks only recognise NA/NaN, so this must run
+    BEFORE validation. Returns a copy — pure and DB-free, so it is unit-testable.
+    """
+    return df.replace(DIABETES_MISSING_SENTINEL, pd.NA)
+
+
+def load_diabetes() -> pd.DataFrame:
+    """Read the single diabetes-encounters CSV and recode missing sentinels.
+
+    Unlike the claims tables there is no Train/Test split to merge — one CSV,
+    one row per hospital encounter.
+    """
+    files = sorted(DIABETES_DATA_DIR.glob(DIABETES_CSV_GLOB))
+    if not files:
+        raise FileNotFoundError(
+            f"No diabetes CSV matching {DIABETES_CSV_GLOB} in {DIABETES_DATA_DIR}"
+        )
+    raw = pd.concat([pd.read_csv(f) for f in files], ignore_index=True)
+    return clean_diabetes_frame(raw)
 
 
 def validate(
@@ -255,7 +289,7 @@ def reset_raw_tables(schema: str = "raw") -> None:
     """
     engine = get_engine()
     with engine.begin() as conn:
-        for table_name in TABLE_CONFIG:
+        for table_name in (*TABLE_CONFIG, DIABETES_TABLE):
             exists = conn.execute(
                 text("select to_regclass(:rel)"),
                 {"rel": f"{schema}.{table_name}"},
@@ -268,7 +302,10 @@ def run_ingestion(
     mode: str = "upsert",
     ingested_at: dt.datetime | None = None,
 ) -> dict[str, dict[str, int]]:
-    """Run full ingestion pipeline for all 4 claims_fraud tables.
+    """Run full ingestion pipeline across both sources.
+
+    Primary source: the 4 claims_fraud tables (Train/Test CSVs merged).
+    Secondary source: the diabetes_readmission encounters (single CSV).
 
     Args:
         mode: ``upsert`` (accumulate, default) or ``replace`` (TRUNCATE first).
@@ -303,6 +340,32 @@ def run_ingestion(
             "loaded": loaded,
             "rejected": len(rejected_df),
         }
+
+    # --- Secondary source: diabetes readmission (single CSV, no train/test) ---
+    print(f"\n{'=' * 50}")
+    print(f"Processing: {DIABETES_TABLE}")
+    print(f"{'=' * 50}")
+
+    print("  Loading diabetes encounters CSV (recoding '?' -> NA)...")
+    diabetes_df = load_diabetes()
+    print(f"  Loaded: {len(diabetes_df)} rows")
+
+    print("  Validating against schema...")
+    valid_df, rejected_df = validate(
+        diabetes_df, DiabetesEncounterSchema, DIABETES_TABLE
+    )
+    print(f"  Valid: {len(valid_df)} rows")
+
+    print("  Loading to PostgreSQL raw schema...")
+    loaded = load_to_postgres(
+        valid_df, DIABETES_TABLE, mode=mode, ingested_at=ingested_at
+    )
+    print(f"  Loaded: {loaded} rows to raw.{DIABETES_TABLE}")
+
+    summary[DIABETES_TABLE] = {
+        "loaded": loaded,
+        "rejected": len(rejected_df),
+    }
 
     print(f"\n{'=' * 50}")
     print("Ingestion complete!")

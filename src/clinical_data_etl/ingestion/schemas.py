@@ -105,3 +105,103 @@ ProviderSchema = DataFrameSchema(
     },
     coerce=True,
 )
+
+
+# ─────────────────────────────────────────────────────────────────────
+# Secondary source: Diabetes readmission (UCI 130-US-hospitals, 1999–2008)
+# Single CSV, grain = one hospital encounter. The '?' missing sentinel is
+# recoded to NA by the loader BEFORE validation, so nullable columns pass.
+# ─────────────────────────────────────────────────────────────────────
+
+# 23 medication columns; each value is one of {No, Steady, Up, Down}.
+_DIABETES_MED_COLS = [
+    "metformin",
+    "repaglinide",
+    "nateglinide",
+    "chlorpropamide",
+    "glimepiride",
+    "acetohexamide",
+    "glipizide",
+    "glyburide",
+    "tolbutamide",
+    "pioglitazone",
+    "rosiglitazone",
+    "acarbose",
+    "miglitol",
+    "troglitazone",
+    "tolazamide",
+    "examide",
+    "citoglipton",
+    "insulin",
+    "glyburide-metformin",
+    "glipizide-metformin",
+    "glimepiride-pioglitazone",
+    "metformin-rosiglitazone",
+    "metformin-pioglitazone",
+]
+
+# Age is binned into 10-year brackets in the source.
+_AGE_BRACKETS = [
+    "[0-10)",
+    "[10-20)",
+    "[20-30)",
+    "[30-40)",
+    "[40-50)",
+    "[50-60)",
+    "[60-70)",
+    "[70-80)",
+    "[80-90)",
+    "[90-100)",
+]
+
+_MED_VALUES = ["No", "Steady", "Up", "Down"]
+
+
+def _medication_columns() -> dict[str, Column]:
+    return {
+        col: Column(str, pa.Check.isin(_MED_VALUES), nullable=False)
+        for col in _DIABETES_MED_COLS
+    }
+
+
+def _nonneg_int(*, nullable: bool = False) -> Column:
+    return Column(int, pa.Check.ge(0), nullable=nullable)
+
+
+DiabetesEncounterSchema = DataFrameSchema(
+    columns={
+        "encounter_id": Column(str, nullable=False, unique=True),
+        "patient_nbr": Column(str, nullable=False),
+        "race": Column(str, nullable=True),
+        "gender": Column(
+            str, pa.Check.isin(["Female", "Male", "Unknown/Invalid"]), nullable=False
+        ),
+        "age": Column(str, pa.Check.isin(_AGE_BRACKETS), nullable=False),
+        "weight": Column(str, nullable=True),
+        "admission_type_id": Column(int, pa.Check.in_range(1, 8), nullable=False),
+        "discharge_disposition_id": Column(int, pa.Check.ge(1), nullable=False),
+        "admission_source_id": Column(int, pa.Check.ge(1), nullable=False),
+        "time_in_hospital": _nonneg_int(),
+        "payer_code": Column(str, nullable=True),
+        "medical_specialty": Column(str, nullable=True),
+        "num_lab_procedures": _nonneg_int(),
+        "num_procedures": _nonneg_int(),
+        "num_medications": _nonneg_int(),
+        "number_outpatient": _nonneg_int(),
+        "number_emergency": _nonneg_int(),
+        "number_inpatient": _nonneg_int(),
+        "diag_1": Column(str, nullable=True),
+        "diag_2": Column(str, nullable=True),
+        "diag_3": Column(str, nullable=True),
+        "number_diagnoses": _nonneg_int(),
+        "max_glu_serum": Column(
+            str, pa.Check.isin(["Norm", ">200", ">300"]), nullable=True
+        ),
+        "A1Cresult": Column(str, pa.Check.isin(["Norm", ">7", ">8"]), nullable=True),
+        **_medication_columns(),
+        "change": Column(str, pa.Check.isin(["No", "Ch"]), nullable=False),
+        "diabetesMed": Column(str, pa.Check.isin(["Yes", "No"]), nullable=False),
+        "readmitted": Column(str, pa.Check.isin(["NO", ">30", "<30"]), nullable=False),
+    },
+    coerce=True,
+)
