@@ -120,6 +120,37 @@ Annotated layout: [`docs/data-sources.md`](docs/data-sources.md)
 - Use `pathlib.Path` for file paths, not string concatenation.
 - Configuration via environment variables (loaded from `.env`), never hardcoded credentials.
 
+## Claude tooling for this repo
+
+Commands and skills vendored into `.claude/` so they work in cloud/web sessions and for collaborators. Invoke a command with `/<name>`; skills auto-trigger or can be invoked by name. All items below are cloud-safe (pure reasoning + repo edits — no local-only browser/MCP dependencies).
+
+### Commands (`.claude/commands/`)
+- **`/explore-plan`** — Explore → plan → confirm before any code; proposes 2–3 ranked approaches and waits for you to pick.
+- **`/tdd`** — Test-first loop: write failing tests for a spec, confirm they fail, then code until green without modifying the tests.
+- **`/handoff`** — Generate a self-contained handoff prompt to continue the work in a fresh session; captures lessons + plan state.
+- **`/wrap`** — End-of-session recap with active-recall quiz and next moves; saves a dated log.
+- **`/begin`** — Session-start orientation: branch, recent commits, open PRs, recap from the last `/wrap` log.
+- **`/trim-context`** — Find and fix Claude Code token bloat (oversized CLAUDE.md vs the 40k limit, bloated memory, `.claude/` cruft).
+- **`/autonomous-milestone`** — Plan/build/test/verify a milestone end-to-end, or triage the backlog into ranked candidates. Uses multi-agent orchestration (higher cost).
+
+### Skills (`.claude/skills/`)
+- **`artifacts-audit`** — Audit the repo for which engineering artifacts (ADRs, runbooks, ERDs, design docs) it should have; writes `docs/artifacts-plan.md`. Plans only, no source changes.
+- **`artifacts-generate`** — Generate the artifacts from that plan (READMEs, ADRs, ERDs, runbooks). Companion to `artifacts-audit`.
+- **`new-dbt-model`** — Scaffold a dbt model to this repo's conventions (layer + `stg_/int_/fct_/dim_` prefix, paired `schema.yml` tests, the `delete+insert` incremental config pattern). Invoke with `/new-dbt-model`.
+- **`add-source`** — Wire a new raw source end-to-end (pandera schema → upsert loader → `raw` table → staging → independent star), following the diabetes path. Invoke with `/add-source`.
+
+### Subagents (`.claude/agents/`)
+- **`dbt-model-reviewer`** — Reviews dbt changes against this repo's modeling rules (grain integrity, fraud label stays in `dim_provider`, incremental boundary, tests present). Read-only.
+- **`analytics-sql-reviewer`** — Audits SQL correctness (join fan-out/grain explosions, NULL handling on recoded columns, window-function partitioning, divide-by-zero in rate columns). Read-only.
+
+### Hooks (`.claude/settings.json` → `.claude/hooks/`)
+- **`ruff-on-edit.sh`** (PostToolUse on `Edit|Write|MultiEdit`) — auto-runs `ruff format` + `ruff check --fix` on edited `.py` files so the CI `ruff format --check` gate stays green; surfaces any unfixable lint back to Claude. Cloud-safe.
+- **`dbt-parse-on-model-edit.sh`** (same trigger) — runs `dbt parse` after editing dbt SQL to catch ref/Jinja/version-API drift before push. DB-free (profiles have `env_var` defaults), so cloud-safe; skips silently if `dbt` isn't installed.
+
+### MCP servers (`.mcp.json`) — 💻 local-only, won't run in cloud/web sessions
+- **`postgres`** (`uvx postgres-mcp --access-mode=restricted`) — read-only query access to the warehouse for inspecting `raw.*`/`marts.*` and verifying marts. Connects via `POSTGRES_*` env vars (defaults to the local dev DB on port **5433**). Needs the running Postgres + `uvx`.
+- **`dbt`** (`uvx dbt-mcp`) — dbt CLI tools (run/test/compile/lineage) over the local project; dbt Cloud features disabled. Needs the local dbt project, DB, and `uvx`. Package/env names may need tweaking per `dbt-mcp` version.
+
 ## Current Priority
 
 **Phase 2 second-source milestone complete** (diabetes-readmission wired as an independent star), on top of the production-shaping milestone (incremental models + idempotent backfills + SCD2 history) and the MVP. Next: consider the tertiary synthetic-hospital dataset or Tier 3 docs.
