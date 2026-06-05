@@ -1,6 +1,6 @@
 # Clinical Data ETL Pipeline
 
-A multi-source clinical data ETL pipeline that ingests Medicare claims fraud detection data (4 related CSV tables), validates with pandera, stages into PostgreSQL, transforms with dbt into a star schema, and orchestrates with Prefect.
+A multi-source clinical data ETL pipeline that ingests two heterogeneous healthcare datasets — Medicare claims fraud detection (4 related CSV tables) and UCI diabetes-readmission hospital encounters — validates each with pandera, stages into PostgreSQL, transforms with dbt into **two independent star schemas**, and orchestrates with Prefect.
 
 Built as a portfolio project for Data Engineering / Analytics Engineering roles.
 
@@ -103,9 +103,42 @@ Built as a portfolio project for Data Engineering / Analytics Engineering roles.
 └─────────────────────────────┘
 ```
 
+## Diabetes Star Schema ERD (second source)
+
+The diabetes-readmission data is modelled as a second, independent star — same
+patterns, different domain. There is no key joining it to the claims data.
+
+```
+┌─────────────────────────────┐      ┌─────────────────────────────┐
+│         dim_patient         │      │     dim_admission_type      │
+├─────────────────────────────┤      ├─────────────────────────────┤
+│ patient_nbr          (PK)   │      │ admission_type_id    (PK)   │  ← dbt seed
+│ race                        │      │ admission_type_label        │
+│ gender                      │      └──────────────┬──────────────┘
+│ latest_age_bracket          │                     │ admission_type_id
+│ total_encounters            │                     │
+│ num_readmissions_30d        │      ┌──────────────┴──────────────┐
+│ readmission_30d_rate        │      │       fct_encounters        │
+└──────────────┬──────────────┘      ├─────────────────────────────┤
+               │ patient_nbr         │ encounter_id         (PK)   │
+               └─────────────────────│ patient_nbr          (FK)   │
+                                     │ admission_type_id    (FK)   │
+                                     │ time_in_hospital            │
+                                     │ num_lab_procedures          │
+                                     │ num_prior_visits            │
+                                     │ num_diabetes_meds           │
+                                     │ diag_1 ... diag_3           │
+                                     │ insulin / metformin         │
+                                     │ readmitted_status           │
+                                     │ is_readmitted_30d           │
+                                     └─────────────────────────────┘
+```
+
 ## Data Lineage
 
-The dbt project builds 9 models across three layers. Run `make dbt-docs` to generate and serve the interactive lineage graph; the same dependency structure is shown below.
+The dbt project builds 15 models across three layers (10 for the claims star, 5
+for the diabetes star). Run `make dbt-docs` to generate and serve the interactive
+lineage graph; the same dependency structure is shown below.
 
 ```mermaid
 flowchart LR
@@ -114,27 +147,35 @@ flowchart LR
         r_inp[(inpatient_claims)]
         r_outp[(outpatient_claims)]
         r_prov[(providers)]
+        r_diab[(diabetes_encounters)]
     end
     subgraph staging
         s_bene[stg_beneficiary]
         s_inp[stg_inpatient_claims]
         s_outp[stg_outpatient_claims]
         s_prov[stg_providers]
+        s_diab[stg_diabetes_encounters]
+        seed_at[/admission_type_mapping seed/]
     end
     subgraph intermediate
         i_uni[int_claims_unified]
         i_enr[int_claims_enriched]
+        i_enc[int_encounters_enriched]
     end
     subgraph marts
         m_fct[fct_claims]
         m_bene[dim_beneficiary]
         m_prov[dim_provider]
+        m_enc[fct_encounters]
+        m_pat[dim_patient]
+        m_adm[dim_admission_type]
     end
 
     r_bene --> s_bene
     r_inp --> s_inp
     r_outp --> s_outp
     r_prov --> s_prov
+    r_diab --> s_diab
 
     s_inp --> i_uni
     s_outp --> i_uni
@@ -144,6 +185,11 @@ flowchart LR
     s_bene --> m_bene
     s_prov --> m_prov
     i_uni --> m_prov
+
+    s_diab --> i_enc
+    i_enc --> m_enc
+    s_diab --> m_pat
+    seed_at --> m_adm
 ```
 
 ## Prerequisites
@@ -244,8 +290,10 @@ data/raw/                 Kaggle datasets (gitignored — see setup instructions
 
 ## Roadmap
 
-MVP complete as of April 2026. The pipeline ingests the claims data end-to-end in well under a minute, passes 39 pytest tests and 46 dbt tests (45 pass, 1 expected warn on the orphan-claims relationship).
+MVP complete as of April 2026. The pipeline ingests both sources end-to-end in well under a minute, passes 47 pytest tests and 71 dbt tests (70 pass, 1 expected warn on the orphan-claims relationship).
 
-**Production-shaping (done):** the warehouse now uses an **idempotent ON CONFLICT upsert** loader (no more DROP+reload), **incremental** `int_claims_enriched`/`fct_claims` models, and **SCD Type 2** history on the provider fraud label (`snap_provider_fraud` → `dim_provider_history`). Because the source data is single-vintage, incrementality and history are demonstrated with deterministic, seeded inputs via `make demo-incremental` and `make demo-scd2`. See [`docs/incremental_scd2.md`](docs/incremental_scd2.md).
+**Production-shaping (done):** the warehouse uses an **idempotent ON CONFLICT upsert** loader (no more DROP+reload), **incremental** `int_claims_enriched`/`fct_claims`/`fct_encounters` models, and **SCD Type 2** history on the provider fraud label (`snap_provider_fraud` → `dim_provider_history`). Because the claims data is single-vintage, incrementality and history are demonstrated with deterministic, seeded inputs via `make demo-incremental` and `make demo-scd2`. See [`docs/incremental_scd2.md`](docs/incremental_scd2.md).
 
-Phase 2 (deferred): integrate the diabetes readmission dataset (`brandao/diabetes`, 70K encounters, 55 features) as a second fact table. The raw directory placeholder (`data/raw/diabetes_readmission/`) is already in place.
+**Phase 2 — second source (done):** the UCI diabetes-readmission dataset (`brandao/diabetes`, 101,766 encounters, 50 columns) is now wired through the full pipeline as a second, independent star schema — `stg_diabetes_encounters` → `int_encounters_enriched` → `fct_encounters` (incremental) + `dim_patient` + a seed-backed `dim_admission_type`. The `?` missing sentinel is recoded to NULL before pandera validation; the analytical target is 30-day readmission. See [`docs/phase2-diabetes-plan.md`](docs/phase2-diabetes-plan.md).
+
+Phase 2 (remaining, deferred): the tertiary synthetic-hospital dataset and Tier 3 docs (ADR directory, full data dictionary).

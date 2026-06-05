@@ -2,7 +2,7 @@
 
 ## Project Overview
 
-A portfolio project demonstrating Data Engineering and Analytics Engineering skills through a multi-source clinical data ETL pipeline. The pipeline ingests real Kaggle healthcare datasets — primarily Medicare claims fraud detection data (4 related CSV tables) — validates each table with pandera, stages into PostgreSQL, transforms with dbt, and orchestrates the workflow with Prefect.
+A portfolio project demonstrating Data Engineering and Analytics Engineering skills through a multi-source clinical data ETL pipeline. The pipeline ingests two real Kaggle healthcare datasets — Medicare claims fraud detection (4 related CSV tables) and UCI diabetes-readmission hospital encounters (1 CSV) — validates each table with pandera, stages into PostgreSQL, transforms with dbt into two independent star schemas, and orchestrates the workflow with Prefect.
 
 This project exists to showcase:
 - Multi-source, multi-table ETL pipeline design and implementation
@@ -14,7 +14,7 @@ This project exists to showcase:
 ### Data Sources
 
 - **PRIMARY**: Medicare Claims Fraud Detection (`data/raw/claims_fraud/`) — 4 tables: beneficiary, inpatient_claims, outpatient_claims, providers; each has Train+Test CSVs merged at ingest. The Test Provider CSV has no `PotentialFraud` column; loader adds `NaN`.
-- **SECONDARY** (Phase 2): Diabetes Readmission (`data/raw/diabetes_readmission/`)
+- **SECONDARY** (WIRED): Diabetes Readmission (`data/raw/diabetes_readmission/diabetic_data.csv`) — single CSV, 101,766 encounters, grain `encounter_id`. The `?` missing sentinel is recoded to NULL before validation. Modelled as a second, independent star (`fct_encounters` + `dim_patient` + seed-backed `dim_admission_type`).
 - **TERTIARY** (Phase 2): Synthetic Hospital (`data/raw/synthetic_hospital/`)
 
 Full CSV filenames and column descriptions: [`docs/data-sources.md`](docs/data-sources.md)
@@ -36,20 +36,21 @@ Full CSV filenames and column descriptions: [`docs/data-sources.md`](docs/data-s
 ## Architectural Decisions
 
 ### Scope
-- **MVP**: Only `claims_fraud` dataset. Diabetes readmission and synthetic hospital are Phase 2.
+- **MVP**: `claims_fraud` dataset. **Phase 2 (done)**: `diabetes_readmission` wired as a second source/star. Synthetic hospital remains Phase 2.
 
 ### Ingestion
 - Train/Test CSV splits are **merged during ingestion** (this is ETL, not ML). Both files per table validate against the same pandera schema, get concatenated, and load into one raw table.
 - The Test Provider file (`Test-1542969243754.csv`) has **no PotentialFraud column**. Handle gracefully: the pandera `ProviderSchema` allows a nullable fraud flag, and the loader adds `PotentialFraud = NaN` when the column is missing.
 
 ### Modeling
-- **Star schema marts**: `fct_claims` (grain: one row per claim), `dim_beneficiary` (one row per beneficiary), `dim_provider` (one row per provider, includes fraud label).
+- **Claims star**: `fct_claims` (grain: one row per claim), `dim_beneficiary` (one row per beneficiary), `dim_provider` (one row per provider, includes fraud label).
 - Fraud label stays in `dim_provider`, **NOT** denormalized onto `fct_claims`.
+- **Diabetes star** (second source): `fct_encounters` (grain: one row per `encounter_id`, incremental), `dim_patient` (one row per `patient_nbr`, demographics from latest encounter + readmission rollups), `dim_admission_type` (seed-backed lookup). No key joins the two stars — they are deliberately independent.
 
 ## Architecture
 
 ```
-CSV files (4 claims_fraud tables + diabetes + synthetic)
+CSV files (4 claims_fraud tables + diabetes encounters [+ synthetic, Phase 2])
   │
   ▼
 Ingestion (pandas + per-table pandera schemas)
@@ -57,20 +58,24 @@ Ingestion (pandas + per-table pandera schemas)
   │  Inpatient CSV   ──→ pandera InpatientClaimSchema
   │  Outpatient CSV  ──→ pandera OutpatientClaimSchema
   │  Provider CSV    ──→ pandera ProviderSchema
+  │  Diabetes CSV    ──→ pandera DiabetesEncounterSchema  ('?' → NA first)
   │
   ▼
 PostgreSQL raw schema
-  │  raw.beneficiary
-  │  raw.inpatient_claims
-  │  raw.outpatient_claims
-  │  raw.providers
+  │  raw.beneficiary, raw.inpatient_claims,
+  │  raw.outpatient_claims, raw.providers
+  │  raw.diabetes_encounters
   │
   ▼
-dbt Transforms
-  ├── staging   (stg_beneficiary, stg_inpatient_claims,
-  │              stg_outpatient_claims, stg_providers)
-  ├── intermediate (int_claims_unified, int_claims_enriched)
-  └── marts     (fct_claims, dim_beneficiary, dim_provider)
+dbt Transforms  (two independent stars)
+  ├── staging   (stg_beneficiary, stg_inpatient_claims, stg_outpatient_claims,
+  │              stg_providers, stg_diabetes_encounters)
+  ├── seeds     (admission_type_mapping)
+  ├── intermediate (int_claims_unified, int_claims_enriched,
+  │              int_encounters_enriched)
+  └── marts     claims:   fct_claims, dim_beneficiary, dim_provider,
+  │                       dim_provider_history (SCD2)
+  │             diabetes: fct_encounters, dim_patient, dim_admission_type
   │
   ▼
 Orchestration (Prefect flows)
@@ -117,15 +122,20 @@ Annotated layout: [`docs/data-sources.md`](docs/data-sources.md)
 
 ## Current Priority
 
-**Production-shaping milestone complete** (incremental models + idempotent backfills + SCD2 history), on top of the MVP. Next: consider Phase 2 (diabetes readmission dataset).
+**Phase 2 second-source milestone complete** (diabetes-readmission wired as an independent star), on top of the production-shaping milestone (incremental models + idempotent backfills + SCD2 history) and the MVP. Next: consider the tertiary synthetic-hospital dataset or Tier 3 docs.
 
 ### What works now
-- `make pipeline` — idempotent end-to-end: upsert ingest → `dbt snapshot` → incremental `dbt run` (10 models) → `dbt test` → validate marts. Re-running is a no-op; raw tables accumulate via `ON CONFLICT` (no more DROP+reload).
+- `make pipeline` — idempotent end-to-end across **both sources**: upsert ingest → `dbt seed` → `dbt snapshot` → incremental `dbt run` (15 models) → `dbt test` → validate marts (both stars). Re-running is a no-op; raw tables accumulate via `ON CONFLICT` (no more DROP+reload).
 - `make pipeline-reset` — clean rebuild: TRUNCATE raw (snapshots survive) + `dbt run --full-refresh`
 - `make pipeline-ingest` / `make pipeline-dbt` — ingestion only / dbt only
 - `make demo-incremental` / `make demo-scd2` — self-verifying, seeded proofs of incremental adds and SCD2 history (see [`docs/incremental_scd2.md`](docs/incremental_scd2.md))
 - `python -m clinical_data_etl [--ingest-only | --dbt-only | --full] [--reset]`
-- 39 pytest tests pass; 46 dbt tests (45 pass, 1 expected warn on the orphan-claims relationship)
+- 47 pytest tests pass; 71 dbt tests (70 pass, 1 expected warn on the orphan-claims relationship)
+
+### Diabetes second-source notes (Phase 2)
+- Single CSV (no train/test merge); `clean_diabetes_frame` recodes the `?` sentinel → NA before pandera `DiabetesEncounterSchema` validation. Loaded to `raw.diabetes_encounters` via the same `load_to_postgres` upsert (`key='encounter_id'`).
+- Star: `stg_diabetes_encounters` → `int_encounters_enriched` (view, derives `num_prior_visits`/`num_diabetes_meds`) → `fct_encounters` (incremental, `unique_key='encounter_id'`) + `dim_patient` (table) + `dim_admission_type` (from `dbt/seeds/admission_type_mapping.csv` — first use of seeds).
+- Analytical target: 30-day readmission (`is_readmitted_30d` = `readmitted_status == '<30'`); overall rate ~11%. Single-vintage (1999–2008) so framed as descriptive feature engineering, not a deployed model.
 
 ### Incremental / SCD2 design notes (important)
 - Incremental boundary: `int_claims_unified` stays a **full view** (because `dim_provider` aggregates over it); only `int_claims_enriched` + `fct_claims` are `materialized='incremental'` (`unique_key='claim_id'`, `delete+insert`).

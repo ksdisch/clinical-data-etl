@@ -7,13 +7,17 @@ This is not a sprint board. For the documentation roadmap, see [`docs/artifacts-
 
 _Nothing open outside the deferred Phase 2 items below._
 
-## Deferred (until Phase 2 activates)
+## Deferred (until Phase 2 continues)
 - [ ] **Tier 3 docs.** ADR directory, full column-level data dictionary, intermediate-model column
   descriptions (see `docs/artifacts-plan.md`).
-- [ ] **Phase 2 dataset.** Integrate diabetes readmission (`brandao/diabetes`) as a second fact
-  table; the raw-dir placeholder already exists.
+- [ ] **Tertiary dataset.** Integrate the synthetic-hospital CSV (`amulyas/synthetic-hospital-data`)
+  as a third source; raw-dir placeholder already exists.
 
 ## Recently done
+- [x] **Phase 2 second source — diabetes readmission.** Wired `brandao/diabetes` (101,766 encounters)
+  through the full pipeline as a second, independent star: `DiabetesEncounterSchema` (`?`→NA),
+  `stg_diabetes_encounters` → `int_encounters_enriched` → `fct_encounters` (incremental) +
+  `dim_patient` + seed-backed `dim_admission_type`. See [`docs/phase2-diabetes-plan.md`](docs/phase2-diabetes-plan.md).
 - [x] **Prefect local DB conflict.** `Makefile` now scopes `PREFECT_HOME := $(CURDIR)/.prefect`
   (gitignored) so a shared `~/.prefect/prefect.db` from another project can't break flow runs.
 - [x] **Pin dependencies / commit a lockfile.** `dbt-core`/`dbt-postgres` pinned to `>=1.10,<1.11`

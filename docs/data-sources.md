@@ -17,10 +17,22 @@ Location: `data/raw/claims_fraud/`
 | `Train-1542865627584.csv` | Provider fraud labels (Provider ID + PotentialFraud indicator) — train split |
 | `Test-1542969243754.csv` | Provider fraud labels — test split (no PotentialFraud column; loader adds `NaN`) |
 
-### SECONDARY — Diabetes Readmission (Phase 2)
-Source: Kaggle `brandao/diabetes`
+### SECONDARY — Diabetes Readmission (WIRED — second fact table)
+Source: Kaggle `brandao/diabetes` (UCI Diabetes 130-US-hospitals, 1999–2008)
 Location: `data/raw/diabetes_readmission/`
-- `diabetic_data.csv` — 70K+ inpatient encounters, 55 features, readmission outcome
+- `diabetic_data.csv` — **101,766 hospital encounters, 50 columns**, readmission outcome.
+
+| Aspect | Detail |
+|--------|--------|
+| Grain | one row per `encounter_id` (verified unique) → `fct_encounters` |
+| Patient key | `patient_nbr` (71,518 distinct) → `dim_patient` |
+| Missing sentinel | the literal string `?` (recoded to NULL at ingestion before pandera validation) |
+| Outcome | `readmitted` ∈ {`NO`, `>30`, `<30`}; analytical target `is_readmitted_30d` = (`<30`) |
+| Notable columns | 23 medication dose-change columns, 3 ICD-9 diagnoses, A1C/glucose labs, admission/discharge id codes |
+| Lookup seed | `admission_type_id` → label via `dbt/seeds/admission_type_mapping.csv` (`dim_admission_type`) |
+
+No natural key joins the diabetes and claims data — they are modelled as two
+**independent star schemas** sharing the same ingestion/validation/dbt patterns.
 
 ### TERTIARY — Synthetic Hospital (Phase 2)
 Source: Kaggle `amulyas/synthetic-hospital-data`
