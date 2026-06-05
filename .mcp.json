@@ -1,0 +1,23 @@
+{
+  "mcpServers": {
+    "postgres": {
+      "command": "uvx",
+      "args": ["postgres-mcp", "--access-mode=restricted"],
+      "env": {
+        "DATABASE_URI": "postgresql://${POSTGRES_USER:-etl_user}:${POSTGRES_PASSWORD:-etl_pass}@${POSTGRES_HOST:-localhost}:${POSTGRES_PORT:-5433}/${POSTGRES_DB:-clinical_etl}"
+      }
+    },
+    "dbt": {
+      "command": "uvx",
+      "args": ["dbt-mcp"],
+      "env": {
+        "DBT_PROJECT_DIR": "${CLAUDE_PROJECT_DIR}/dbt",
+        "DBT_PROFILES_DIR": "${CLAUDE_PROJECT_DIR}/dbt",
+        "DBT_PATH": "${CLAUDE_PROJECT_DIR}/.venv/bin/dbt",
+        "DISABLE_SEMANTIC_LAYER": "true",
+        "DISABLE_DISCOVERY": "true",
+        "DISABLE_REMOTE": "true"
+      }
+    }
+  }
+}
