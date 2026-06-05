@@ -120,6 +120,23 @@ Annotated layout: [`docs/data-sources.md`](docs/data-sources.md)
 - Use `pathlib.Path` for file paths, not string concatenation.
 - Configuration via environment variables (loaded from `.env`), never hardcoded credentials.
 
+## Claude tooling for this repo
+
+Commands and skills vendored into `.claude/` so they work in cloud/web sessions and for collaborators. Invoke a command with `/<name>`; skills auto-trigger or can be invoked by name. All items below are cloud-safe (pure reasoning + repo edits — no local-only browser/MCP dependencies).
+
+### Commands (`.claude/commands/`)
+- **`/explore-plan`** — Explore → plan → confirm before any code; proposes 2–3 ranked approaches and waits for you to pick.
+- **`/tdd`** — Test-first loop: write failing tests for a spec, confirm they fail, then code until green without modifying the tests.
+- **`/handoff`** — Generate a self-contained handoff prompt to continue the work in a fresh session; captures lessons + plan state.
+- **`/wrap`** — End-of-session recap with active-recall quiz and next moves; saves a dated log.
+- **`/begin`** — Session-start orientation: branch, recent commits, open PRs, recap from the last `/wrap` log.
+- **`/trim-context`** — Find and fix Claude Code token bloat (oversized CLAUDE.md vs the 40k limit, bloated memory, `.claude/` cruft).
+- **`/autonomous-milestone`** — Plan/build/test/verify a milestone end-to-end, or triage the backlog into ranked candidates. Uses multi-agent orchestration (higher cost).
+
+### Skills (`.claude/skills/`)
+- **`artifacts-audit`** — Audit the repo for which engineering artifacts (ADRs, runbooks, ERDs, design docs) it should have; writes `docs/artifacts-plan.md`. Plans only, no source changes.
+- **`artifacts-generate`** — Generate the artifacts from that plan (READMEs, ADRs, ERDs, runbooks). Companion to `artifacts-audit`.
+
 ## Current Priority
 
 **Phase 2 second-source milestone complete** (diabetes-readmission wired as an independent star), on top of the production-shaping milestone (incremental models + idempotent backfills + SCD2 history) and the MVP. Next: consider the tertiary synthetic-hospital dataset or Tier 3 docs.
