@@ -1,11 +1,14 @@
 """Tests for the ingestion loaders."""
 
+import datetime as dt
+
 import pandas as pd
 import pytest
 
 from clinical_data_etl.ingestion.loaders import (
     DATA_DIR,
     TABLE_CONFIG,
+    claim_id_bucket,
     load_and_merge,
     validate,
 )
@@ -127,3 +130,86 @@ class TestIngestionIntegration:
                 assert db_count == counts["loaded"], (
                     f"raw.{table_name}: expected {counts['loaded']}, got {db_count}"
                 )
+
+
+# ── claim_id_bucket (pure, no DB) ────────────────────────────────────
+
+
+class TestClaimIdBucket:
+    def test_deterministic(self):
+        assert claim_id_bucket("CLM123") == claim_id_bucket("CLM123")
+
+    def test_in_range(self):
+        assert all(0 <= claim_id_bucket(f"CLM{i}", 2) < 2 for i in range(50))
+
+    def test_partition_is_non_trivial(self):
+        # Both buckets are populated over a reasonable sample (not all one side).
+        buckets = {claim_id_bucket(f"CLM{i}", 2) for i in range(50)}
+        assert buckets == {0, 1}
+
+
+# ── Upsert idempotency (requires PostgreSQL, no CSVs) ─────────────────
+
+
+class TestUpsertIdempotency:
+    """The ON CONFLICT upsert must accumulate without duplicating, update
+    non-key columns, and preserve ingested_at (first-seen time)."""
+
+    @pytest.fixture(autouse=True)
+    def _check_db(self):
+        try:
+            from clinical_data_etl.utils.db import test_connection
+
+            test_connection()
+        except Exception:
+            pytest.skip("PostgreSQL not available — run `make db-up`")
+
+    def test_upsert_idempotent_updates_and_preserves_ingested_at(self):
+        from sqlalchemy import text
+
+        from clinical_data_etl.ingestion.loaders import load_to_postgres
+        from clinical_data_etl.utils.db import get_engine
+
+        engine = get_engine()
+        table = "ut_upsert_demo"
+        first_ts = dt.datetime(2026, 1, 1, tzinfo=dt.UTC)
+        second_ts = dt.datetime(2026, 2, 2, tzinfo=dt.UTC)
+        df = pd.DataFrame([{"id": "A", "val": "x"}, {"id": "B", "val": "y"}])
+
+        try:
+            load_to_postgres(df, table, key="id", ingested_at=first_ts)
+            # Re-load identical data: must be a no-op (no row growth).
+            load_to_postgres(df, table, key="id", ingested_at=second_ts)
+
+            with engine.connect() as conn:
+                count = conn.execute(
+                    text(f'SELECT count(*) FROM raw."{table}"')
+                ).scalar()
+                has_index = conn.execute(
+                    text(
+                        "SELECT 1 FROM pg_indexes WHERE schemaname='raw' "
+                        "AND indexname='ux_ut_upsert_demo_id'"
+                    )
+                ).scalar()
+            assert count == 2, "upsert must not duplicate rows"
+            assert has_index == 1, "unique index on the natural key must exist"
+
+            # Change a non-key column: row is updated, not duplicated; ingested_at kept.
+            df2 = pd.DataFrame([{"id": "A", "val": "z"}, {"id": "B", "val": "y"}])
+            load_to_postgres(df2, table, key="id", ingested_at=second_ts)
+            with engine.connect() as conn:
+                count2 = conn.execute(
+                    text(f'SELECT count(*) FROM raw."{table}"')
+                ).scalar()
+                val_a = conn.execute(
+                    text(f"SELECT val FROM raw.\"{table}\" WHERE id='A'")
+                ).scalar()
+                ingested_a = conn.execute(
+                    text(f"SELECT ingested_at FROM raw.\"{table}\" WHERE id='A'")
+                ).scalar()
+            assert count2 == 2
+            assert val_a == "z", "non-key column must be updated on conflict"
+            assert ingested_a.month == 1, "ingested_at must be preserved (first-seen)"
+        finally:
+            with engine.begin() as conn:
+                conn.execute(text(f'DROP TABLE IF EXISTS raw."{table}"'))
