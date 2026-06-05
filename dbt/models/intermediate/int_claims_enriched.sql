@@ -1,6 +1,20 @@
+{{
+    config(
+        materialized='incremental',
+        unique_key='claim_id',
+        incremental_strategy='delete+insert',
+        on_schema_change='sync_all_columns'
+    )
+}}
+
 with claims as (
 
     select * from {{ ref('int_claims_unified') }}
+    {% if is_incremental() %}
+    -- Static 2009 data has no time delta, so the honest "new rows only" boundary
+    -- is claim_id set-membership: only claims not yet materialised here.
+    where claim_id not in (select claim_id from {{ this }})
+    {% endif %}
 
 ),
 

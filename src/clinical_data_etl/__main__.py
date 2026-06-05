@@ -24,17 +24,23 @@ def main() -> None:
         default=True,
         help="Run full pipeline (default)",
     )
+    parser.add_argument(
+        "--reset",
+        action="store_true",
+        help="Clean rebuild: TRUNCATE raw tables (snapshots survive) and "
+        "full-refresh incremental dbt models. Default is idempotent accumulation.",
+    )
 
     args = parser.parse_args()
 
     from clinical_data_etl.orchestration.flows import pipeline_flow
 
     if args.ingest_only:
-        pipeline_flow(run_ingestion=True, run_dbt=False)
+        pipeline_flow(run_ingestion=True, run_dbt=False, reset=args.reset)
     elif args.dbt_only:
-        pipeline_flow(run_ingestion=False, run_dbt=True)
+        pipeline_flow(run_ingestion=False, run_dbt=True, reset=args.reset)
     else:
-        pipeline_flow(run_ingestion=True, run_dbt=True)
+        pipeline_flow(run_ingestion=True, run_dbt=True, reset=args.reset)
 
 
 if __name__ == "__main__":

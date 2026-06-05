@@ -27,14 +27,18 @@ def _get_logger() -> logging.Logger | logging.LoggerAdapter[Any]:
 
 
 @task(name="ingest-claims-data")
-def ingest_task() -> dict[str, dict[str, int]]:
-    """Run the full claims_fraud ingestion pipeline."""
+def ingest_task(mode: str = "upsert") -> dict[str, dict[str, int]]:
+    """Run the full claims_fraud ingestion pipeline.
+
+    Args:
+        mode: ``upsert`` (accumulate, default) or ``replace`` (TRUNCATE first).
+    """
     logger = _get_logger()
 
     from clinical_data_etl.ingestion.loaders import run_ingestion
 
-    logger.info("Starting ingestion of claims_fraud dataset...")
-    summary = run_ingestion()
+    logger.info("Starting ingestion of claims_fraud dataset (mode=%s)...", mode)
+    summary = run_ingestion(mode=mode)
 
     for table_name, counts in summary.items():
         logger.info(
@@ -78,12 +82,24 @@ def _run_dbt_command(args: list[str]) -> str:
     return result.stdout
 
 
-@task(name="dbt-run", retries=2, retry_delay_seconds=10)
-def dbt_run_task() -> str:
-    """Run dbt models."""
+@task(name="dbt-snapshot", retries=2, retry_delay_seconds=10)
+def dbt_snapshot_task() -> str:
+    """Run dbt snapshots (SCD2 fraud-label history). Runs before dbt_run so the
+    snapshot relation exists for dim_provider_history to build from."""
     logger = _get_logger()
-    logger.info("Running dbt run...")
-    output = _run_dbt_command(["run"])
+    logger.info("Running dbt snapshot...")
+    output = _run_dbt_command(["snapshot"])
+    logger.info("dbt snapshot completed successfully")
+    return output
+
+
+@task(name="dbt-run", retries=2, retry_delay_seconds=10)
+def dbt_run_task(full_refresh: bool = False) -> str:
+    """Run dbt models. ``full_refresh`` rebuilds incremental models from scratch."""
+    logger = _get_logger()
+    logger.info("Running dbt run%s...", " --full-refresh" if full_refresh else "")
+    args = ["run", "--full-refresh"] if full_refresh else ["run"]
+    output = _run_dbt_command(args)
     logger.info("dbt run completed successfully")
     return output
 
@@ -105,7 +121,12 @@ def validate_marts_task() -> dict[str, int]:
     logger.info("Validating mart tables...")
 
     engine = get_engine()
-    mart_tables = ["fct_claims", "dim_beneficiary", "dim_provider"]
+    mart_tables = [
+        "fct_claims",
+        "dim_beneficiary",
+        "dim_provider",
+        "dim_provider_history",
+    ]
     row_counts: dict[str, int] = {}
 
     with engine.connect() as conn:

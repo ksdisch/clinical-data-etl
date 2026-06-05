@@ -7,6 +7,7 @@ from prefect import flow, get_run_logger
 
 from clinical_data_etl.orchestration.tasks import (
     dbt_run_task,
+    dbt_snapshot_task,
     dbt_test_task,
     ingest_task,
     validate_marts_task,
@@ -17,33 +18,42 @@ from clinical_data_etl.orchestration.tasks import (
 def pipeline_flow(
     run_ingestion: bool = True,
     run_dbt: bool = True,
+    reset: bool = False,
 ) -> dict[str, Any]:
     """End-to-end clinical data ETL pipeline.
 
     Args:
         run_ingestion: Whether to run the ingestion step.
-        run_dbt: Whether to run the dbt run/test steps.
+        run_dbt: Whether to run the dbt snapshot/run/test steps.
+        reset: Clean rebuild — TRUNCATE raw (snapshots survive) and full-refresh
+            incremental dbt models. Default is incremental/idempotent accumulation.
     """
     logger = get_run_logger()
     start = time.time()
     summary: dict[str, Any] = {}
 
     if run_ingestion:
-        logger.info("Step 1/4: Ingesting claims data...")
-        summary["ingestion"] = ingest_task()
+        mode = "replace" if reset else "upsert"
+        logger.info("Step 1/5: Ingesting claims data (mode=%s)...", mode)
+        summary["ingestion"] = ingest_task(mode=mode)
     else:
-        logger.info("Step 1/4: Skipping ingestion")
+        logger.info("Step 1/5: Skipping ingestion")
 
     if run_dbt:
-        logger.info("Step 2/4: Running dbt models...")
-        summary["dbt_run"] = dbt_run_task()
+        logger.info("Step 2/5: Building SCD2 snapshots...")
+        summary["dbt_snapshot"] = dbt_snapshot_task()
 
-        logger.info("Step 3/4: Running dbt tests...")
+        logger.info(
+            "Step 3/5: Running dbt models%s...", " (full-refresh)" if reset else ""
+        )
+        summary["dbt_run"] = dbt_run_task(full_refresh=reset)
+
+        logger.info("Step 4/5: Running dbt tests...")
         summary["dbt_test"] = dbt_test_task()
     else:
-        logger.info("Steps 2-3/4: Skipping dbt")
+        logger.info("Steps 2-4/5: Skipping dbt")
 
-    logger.info("Step 4/4: Validating mart tables...")
+    logger.info("Step 5/5: Validating mart tables...")
     summary["mart_row_counts"] = validate_marts_task()
 
     elapsed = time.time() - start
