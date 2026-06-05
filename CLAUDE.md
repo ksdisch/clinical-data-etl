@@ -13,30 +13,11 @@ This project exists to showcase:
 
 ### Data Sources
 
-**PRIMARY — Medicare Claims Fraud Detection**
-Source: Kaggle `rohitrox/healthcare-provider-fraud-detection-analysis`
-Location: `data/raw/claims_fraud/`
+- **PRIMARY**: Medicare Claims Fraud Detection (`data/raw/claims_fraud/`) — 4 tables: beneficiary, inpatient_claims, outpatient_claims, providers; each has Train+Test CSVs merged at ingest. The Test Provider CSV has no `PotentialFraud` column; loader adds `NaN`.
+- **SECONDARY** (Phase 2): Diabetes Readmission (`data/raw/diabetes_readmission/`)
+- **TERTIARY** (Phase 2): Synthetic Hospital (`data/raw/synthetic_hospital/`)
 
-| File | Description |
-|------|-------------|
-| `Train_Beneficiarydata-1542865627584.csv` | Beneficiary demographics: BeneID, DOB, DOD, Gender, Race, chronic condition flags, reimbursement amounts |
-| `Test_Beneficiarydata-1542969243754.csv` | Beneficiary test split |
-| `Train_Inpatientdata-1542865627584.csv` | Inpatient claims: BeneID, ClaimID, Provider, diagnosis/procedure codes, admission/discharge dates, reimbursement |
-| `Test_Inpatientdata-1542969243754.csv` | Inpatient claims test split |
-| `Train_Outpatientdata-1542865627584.csv` | Outpatient claims: same structure as inpatient, no admission dates |
-| `Test_Outpatientdata-1542969243754.csv` | Outpatient claims test split |
-| `Train-1542865627584.csv` | Provider fraud labels (Provider ID + PotentialFraud indicator) — train split |
-| `Test-1542969243754.csv` | Provider fraud labels — test split |
-
-**SECONDARY — Diabetes Readmission**
-Source: Kaggle `brandao/diabetes`
-Location: `data/raw/diabetes_readmission/`
-- `diabetic_data.csv` — 70K+ inpatient encounters, 55 features, readmission outcome
-
-**TERTIARY — Synthetic Hospital**
-Source: Kaggle `amulyas/synthetic-hospital-data`
-Location: `data/raw/synthetic_hospital/`
-- `HospitalSynthetic1.csv` — Lightweight dataset for testing and development
+Full CSV filenames and column descriptions: [`docs/data-sources.md`](docs/data-sources.md)
 
 ## Tech Stack
 
@@ -105,47 +86,9 @@ Orchestration (Prefect flows)
 
 ## Folder Structure
 
-```
-clinical-data-etl/
-├── CLAUDE.md
-├── Makefile
-├── pyproject.toml
-├── docker-compose.yml
-├── .env.example
-├── data/
-│   └── raw/
-│       ├── claims_fraud/           # Medicare claims fraud CSVs (primary)
-│       ├── diabetes_readmission/   # Diabetes readmission CSV (secondary)
-│       └── synthetic_hospital/     # Synthetic hospital CSV (tertiary)
-├── src/
-│   └── clinical_data_etl/
-│       ├── __init__.py
-│       ├── ingestion/      # CSV loading, pandera schemas, DB writes
-│       │   ├── __init__.py
-│       │   ├── loaders.py
-│       │   └── schemas.py
-│       ├── orchestration/  # Prefect flows and tasks
-│       │   ├── __init__.py
-│       │   ├── flows.py
-│       │   └── tasks.py
-│       └── utils/          # DB connections, config, shared helpers
-│           ├── __init__.py
-│           └── db.py
-├── dbt/
-│   ├── dbt_project.yml
-│   ├── profiles.yml
-│   ├── models/
-│   │   ├── staging/
-│   │   ├── intermediate/
-│   │   └── marts/
-│   ├── seeds/
-│   ├── macros/
-│   └── tests/
-└── tests/                  # pytest tests for Python code
-    ├── conftest.py
-    ├── test_ingestion/
-    └── test_utils/
-```
+`src/clinical_data_etl/{ingestion,orchestration,utils}/` · `dbt/models/{staging,intermediate,marts}/` + `dbt/{snapshots,seeds,macros,tests}/` · `tests/{test_ingestion,test_utils}/` · `data/raw/{claims_fraud,diabetes_readmission,synthetic_hospital}/`
+
+Annotated layout: [`docs/data-sources.md`](docs/data-sources.md)
 
 ## Conventions
 
