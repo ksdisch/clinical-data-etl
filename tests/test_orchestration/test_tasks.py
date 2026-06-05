@@ -38,6 +38,17 @@ class TestDbtRunTask:
             dbt_run_task.fn()
 
 
+class TestDbtSeedTask:
+    @patch("clinical_data_etl.orchestration.tasks._run_dbt_command")
+    def test_calls_dbt_seed(self, mock_dbt):
+        from clinical_data_etl.orchestration.tasks import dbt_seed_task
+
+        mock_dbt.return_value = "Done. PASS=1"
+        result = dbt_seed_task.fn()
+        mock_dbt.assert_called_once_with(["seed"])
+        assert "PASS" in result
+
+
 class TestDbtTestTask:
     @patch("clinical_data_etl.orchestration.tasks._run_dbt_command")
     def test_calls_dbt_test(self, mock_dbt):

@@ -82,6 +82,18 @@ def _run_dbt_command(args: list[str]) -> str:
     return result.stdout
 
 
+@task(name="dbt-seed", retries=2, retry_delay_seconds=10)
+def dbt_seed_task() -> str:
+    """Load dbt seeds (reference/lookup data, e.g. the admission_type_mapping
+    backing dim_admission_type). Runs before dbt_run so seed-backed models can
+    build. Idempotent — re-seeding replaces the small lookup tables."""
+    logger = _get_logger()
+    logger.info("Running dbt seed...")
+    output = _run_dbt_command(["seed"])
+    logger.info("dbt seed completed successfully")
+    return output
+
+
 @task(name="dbt-snapshot", retries=2, retry_delay_seconds=10)
 def dbt_snapshot_task() -> str:
     """Run dbt snapshots (SCD2 fraud-label history). Runs before dbt_run so the
@@ -122,10 +134,15 @@ def validate_marts_task() -> dict[str, int]:
 
     engine = get_engine()
     mart_tables = [
+        # Claims star
         "fct_claims",
         "dim_beneficiary",
         "dim_provider",
         "dim_provider_history",
+        # Diabetes star
+        "fct_encounters",
+        "dim_patient",
+        "dim_admission_type",
     ]
     row_counts: dict[str, int] = {}
 
