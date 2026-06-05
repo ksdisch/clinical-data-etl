@@ -1,0 +1,9 @@
+admission_type_id,admission_type_label
+1,Emergency
+2,Urgent
+3,Elective
+4,Newborn
+5,Not Available
+6,Unknown
+7,Trauma Center
+8,Not Mapped

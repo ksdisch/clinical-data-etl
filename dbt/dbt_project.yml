@@ -25,3 +25,7 @@ models:
     marts:
       +schema: marts
       +materialized: table
+
+seeds:
+  clinical_data_etl:
+    +schema: staging  # reference/lookup data lands alongside the cleaned layer

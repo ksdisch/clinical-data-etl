@@ -7,6 +7,7 @@ from prefect import flow, get_run_logger
 
 from clinical_data_etl.orchestration.tasks import (
     dbt_run_task,
+    dbt_seed_task,
     dbt_snapshot_task,
     dbt_test_task,
     ingest_task,
@@ -34,26 +35,29 @@ def pipeline_flow(
 
     if run_ingestion:
         mode = "replace" if reset else "upsert"
-        logger.info("Step 1/5: Ingesting claims data (mode=%s)...", mode)
+        logger.info("Step 1/6: Ingesting both sources (mode=%s)...", mode)
         summary["ingestion"] = ingest_task(mode=mode)
     else:
-        logger.info("Step 1/5: Skipping ingestion")
+        logger.info("Step 1/6: Skipping ingestion")
 
     if run_dbt:
-        logger.info("Step 2/5: Building SCD2 snapshots...")
+        logger.info("Step 2/6: Loading dbt seeds (lookup dimensions)...")
+        summary["dbt_seed"] = dbt_seed_task()
+
+        logger.info("Step 3/6: Building SCD2 snapshots...")
         summary["dbt_snapshot"] = dbt_snapshot_task()
 
         logger.info(
-            "Step 3/5: Running dbt models%s...", " (full-refresh)" if reset else ""
+            "Step 4/6: Running dbt models%s...", " (full-refresh)" if reset else ""
         )
         summary["dbt_run"] = dbt_run_task(full_refresh=reset)
 
-        logger.info("Step 4/5: Running dbt tests...")
+        logger.info("Step 5/6: Running dbt tests...")
         summary["dbt_test"] = dbt_test_task()
     else:
-        logger.info("Steps 2-4/5: Skipping dbt")
+        logger.info("Steps 2-5/6: Skipping dbt")
 
-    logger.info("Step 5/5: Validating mart tables...")
+    logger.info("Step 6/6: Validating mart tables...")
     summary["mart_row_counts"] = validate_marts_task()
 
     elapsed = time.time() - start

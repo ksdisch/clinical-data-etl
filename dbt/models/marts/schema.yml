@@ -147,3 +147,88 @@ models:
         description: "True for the open/current version of each provider"
         tests:
           - not_null
+
+  # ── Diabetes star (SECONDARY source) ──────────────────────────────────
+  - name: fct_encounters
+    description: >
+      Second fact table (SECONDARY source). One row per hospital encounter
+      from the UCI diabetes-readmission data. Incremental like fct_claims.
+      Join to dim_patient on patient_nbr and dim_admission_type on
+      admission_type_id.
+    columns:
+      - name: encounter_id
+        description: "Unique encounter identifier (grain)"
+        tests:
+          - unique
+          - not_null
+      - name: patient_nbr
+        description: "Patient identifier (FK to dim_patient)"
+        tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_patient')
+                field: patient_nbr
+      - name: admission_type_id
+        description: "Admission type code (FK to dim_admission_type)"
+        tests:
+          - relationships:
+              arguments:
+                to: ref('dim_admission_type')
+                field: admission_type_id
+      - name: time_in_hospital
+        description: "Length of stay in days (1–14)"
+      - name: num_prior_visits
+        description: "Prior outpatient + emergency + inpatient visits in the year"
+      - name: num_diabetes_meds
+        description: "Count of the 23 tracked drugs actively prescribed (0–23)"
+      - name: readmitted_status
+        description: "3-class readmission outcome: NO / >30 / <30"
+        tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ['NO', '>30', '<30']
+      - name: is_readmitted_30d
+        description: "True when readmitted within 30 days (readmitted_status = '<30')"
+        tests:
+          - not_null
+
+  - name: dim_patient
+    description: >
+      Patient dimension for the diabetes star. One row per patient_nbr;
+      demographics from the patient's most recent encounter, plus readmission
+      rollups across all of their encounters.
+    columns:
+      - name: patient_nbr
+        description: "Unique patient identifier"
+        tests:
+          - unique
+          - not_null
+      - name: race
+        description: "Race from the patient's latest encounter (NULL if not recorded)"
+      - name: gender
+        description: "Gender from the patient's latest encounter"
+      - name: latest_age_bracket
+        description: "10-year age bracket at the patient's most recent encounter"
+      - name: total_encounters
+        description: "Number of encounters for this patient"
+      - name: num_readmissions_30d
+        description: "How many of those encounters were 30-day readmissions"
+      - name: readmission_30d_rate
+        description: "num_readmissions_30d / total_encounters (0–1, 4 dp)"
+
+  - name: dim_admission_type
+    description: >
+      Conformed lookup dimension built from the admission_type_mapping seed.
+      Labels the admission_type_id integer on fct_encounters.
+    columns:
+      - name: admission_type_id
+        description: "Admission type code (1–8)"
+        tests:
+          - unique
+          - not_null
+      - name: admission_type_label
+        description: "Human-readable admission type (Emergency, Urgent, …)"
+        tests:
+          - not_null

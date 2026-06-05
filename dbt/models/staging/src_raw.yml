@@ -4,12 +4,12 @@ sources:
   - name: raw
     schema: raw
     description: >
-      Medicare provider fraud-detection data ingested from Kaggle
-      (rohitrox/healthcare-provider-fraud-detection-analysis). Train and test
-      CSV splits are merged at ingestion time into one table per entity. Row
-      counts below are approximate merged train+test totals from the source
-      CSVs, before pandera validation rejects are quarantined to
-      data/rejected/.
+      Raw landing schema for both pipeline sources. PRIMARY: Medicare provider
+      fraud-detection data (Kaggle rohitrox/healthcare-provider-fraud-detection-analysis),
+      train/test CSV splits merged into one table per entity. SECONDARY: UCI
+      diabetes 130-US-hospitals readmission encounters. Row counts below are
+      approximate source totals before pandera validation quarantines rejects
+      to data/rejected/. All tables carry a first-seen ingested_at audit column.
     tables:
       - name: beneficiary
         description: >
@@ -33,3 +33,10 @@ sources:
           Provider list keyed by provider_id with the PotentialFraud label.
           Test-split providers (Test-*.csv) have no PotentialFraud column and
           are loaded with a NULL fraud flag. ~6.8K rows (merged train+test).
+      - name: diabetes_encounters
+        description: >
+          SECONDARY source — UCI diabetes 130-US-hospitals readmission data
+          (single CSV, 1999–2008). One row per hospital encounter (encounter_id),
+          with patient_nbr, demographics, utilisation counts, 23 medication
+          columns, and the readmitted outcome (NO / >30 / <30). The source '?'
+          missing sentinel is recoded to NULL at ingestion. ~101.8K rows.
