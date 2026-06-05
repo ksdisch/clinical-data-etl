@@ -225,9 +225,12 @@ data/raw/                 Kaggle datasets (gitignored — see setup instructions
 | `make db-down`  | Stop PostgreSQL container                   |
 | `make test`     | Run pytest                                  |
 | `make lint`     | Run ruff linter                             |
-| `make pipeline` | Run full ETL pipeline (ingest + dbt + test)  |
+| `make pipeline` | Run full ETL pipeline (idempotent: upsert ingest + snapshot + incremental dbt + test) |
+| `make pipeline-reset` | Clean rebuild: TRUNCATE raw (snapshots survive) + dbt `--full-refresh` |
 | `make pipeline-ingest` | Ingestion only (CSV → PostgreSQL)      |
 | `make pipeline-dbt` | dbt only (transform + test)               |
+| `make demo-incremental` | Self-verifying proof of incremental adds + idempotency |
+| `make demo-scd2` | Self-verifying proof of SCD2 fraud-label history (seeded vintage) |
 | `make dbt-compile` | Compile dbt models (validate SQL, no DB writes) |
 | `make dbt-docs` | Generate and serve dbt docs + lineage graph     |
 
@@ -241,6 +244,8 @@ data/raw/                 Kaggle datasets (gitignored — see setup instructions
 
 ## Roadmap
 
-MVP complete as of April 2026. The pipeline ingests 848K rows end-to-end in ~36 seconds, passes 34 pytest tests and 41 dbt tests (40 pass, 1 expected warn on the orphan-claims relationship).
+MVP complete as of April 2026. The pipeline ingests the claims data end-to-end in well under a minute, passes 39 pytest tests and 46 dbt tests (45 pass, 1 expected warn on the orphan-claims relationship).
+
+**Production-shaping (done):** the warehouse now uses an **idempotent ON CONFLICT upsert** loader (no more DROP+reload), **incremental** `int_claims_enriched`/`fct_claims` models, and **SCD Type 2** history on the provider fraud label (`snap_provider_fraud` → `dim_provider_history`). Because the source data is single-vintage, incrementality and history are demonstrated with deterministic, seeded inputs via `make demo-incremental` and `make demo-scd2`. See [`docs/incremental_scd2.md`](docs/incremental_scd2.md).
 
 Phase 2 (deferred): integrate the diabetes readmission dataset (`brandao/diabetes`, 70K encounters, 55 features) as a second fact table. The raw directory placeholder (`data/raw/diabetes_readmission/`) is already in place.

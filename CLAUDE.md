@@ -174,11 +174,18 @@ clinical-data-etl/
 
 ## Current Priority
 
-**MVP Complete — Pipeline runs end-to-end.** Next: polish README, add dbt docs, consider Phase 2 (diabetes readmission dataset).
+**Production-shaping milestone complete** (incremental models + idempotent backfills + SCD2 history), on top of the MVP. Next: consider Phase 2 (diabetes readmission dataset).
 
 ### What works now
-- `make pipeline` — full end-to-end: ingest 848K rows → dbt run (9 models) → dbt test (41 tests) → validate marts (~36s)
-- `make pipeline-ingest` — ingestion only
-- `make pipeline-dbt` — dbt only (skip ingestion)
-- `python -m clinical_data_etl [--ingest-only | --dbt-only | --full]`
-- 34 pytest tests pass, 41 dbt tests pass (40 pass, 1 warn)
+- `make pipeline` — idempotent end-to-end: upsert ingest → `dbt snapshot` → incremental `dbt run` (10 models) → `dbt test` → validate marts. Re-running is a no-op; raw tables accumulate via `ON CONFLICT` (no more DROP+reload).
+- `make pipeline-reset` — clean rebuild: TRUNCATE raw (snapshots survive) + `dbt run --full-refresh`
+- `make pipeline-ingest` / `make pipeline-dbt` — ingestion only / dbt only
+- `make demo-incremental` / `make demo-scd2` — self-verifying, seeded proofs of incremental adds and SCD2 history (see [`docs/incremental_scd2.md`](docs/incremental_scd2.md))
+- `python -m clinical_data_etl [--ingest-only | --dbt-only | --full] [--reset]`
+- 39 pytest tests pass; 46 dbt tests (45 pass, 1 expected warn on the orphan-claims relationship)
+
+### Incremental / SCD2 design notes (important)
+- Incremental boundary: `int_claims_unified` stays a **full view** (because `dim_provider` aggregates over it); only `int_claims_enriched` + `fct_claims` are `materialized='incremental'` (`unique_key='claim_id'`, `delete+insert`).
+- SCD2: `dbt/snapshots/snap_provider_fraud.sql` (check strategy on `is_potential_fraud`, reads `source('raw','providers')`) → `dim_provider_history` mart, with no-overlap / one-current invariant tests in `dbt/tests/`.
+- The data is single-vintage (~2009), so incrementality and history are demonstrated with **deterministic seeded** inputs (hash-bucketed claims; a seeded fraud-flag flip) — framed honestly as seeded demos, not real CDC.
+- Loader: `load_to_postgres(..., mode='upsert'|'replace')` stamps a first-seen `ingested_at` (never overwritten on conflict) and ensures a unique index per natural key.
