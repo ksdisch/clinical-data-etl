@@ -121,3 +121,29 @@ models:
         description: "Count of distinct beneficiaries who had at least one claim with this provider"
       - name: avg_reimbursement_per_claim
         description: "total_reimbursement / total_claims, rounded to 2 decimal places"
+
+  - name: dim_provider_history
+    description: >
+      SCD Type 2 history of the provider fraud label, built from the
+      snap_provider_fraud dbt snapshot. One row per (provider_id, validity
+      window); when is_potential_fraud changes the prior row is closed
+      (valid_to set) and a new current row opens. Temporal-validity invariants
+      (no overlapping windows, exactly one current row per provider) are enforced
+      by singular tests in dbt/tests/.
+    columns:
+      - name: provider_id
+        description: "Provider identifier (NOT unique here — one row per version)"
+        tests:
+          - not_null
+      - name: is_potential_fraud
+        description: "Fraud label value during this validity window"
+      - name: valid_from
+        description: "Timestamp this version became effective (dbt_valid_from)"
+        tests:
+          - not_null
+      - name: valid_to
+        description: "Timestamp this version was superseded; NULL for the current row"
+      - name: is_current
+        description: "True for the open/current version of each provider"
+        tests:
+          - not_null

@@ -77,3 +77,44 @@ jobs:
         env:
           DATABASE_URL: postgresql://etl_user:etl_pass@localhost:5432/clinical_etl
         run: pytest --tb=short -q
+
+  dbt:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_DB: clinical_etl
+          POSTGRES_USER: etl_user
+          POSTGRES_PASSWORD: etl_pass
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U etl_user -d clinical_etl"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+
+      - name: Install dependencies
+        run: pip install -e ".[dev]"
+
+      # Validates that all models, the incremental configs, the snapshot, and the
+      # custom tests parse and compile — catching the dbt version-sensitive API
+      # drift that previously reddened main. No Kaggle data required.
+      - name: dbt compile
+        env:
+          POSTGRES_HOST: localhost
+          POSTGRES_PORT: "5432"
+          POSTGRES_USER: etl_user
+          POSTGRES_PASSWORD: etl_pass
+          POSTGRES_DB: clinical_etl
+        run: dbt compile --profiles-dir dbt --project-dir dbt

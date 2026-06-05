@@ -5,22 +5,7 @@ This is not a sprint board. For the documentation roadmap, see [`docs/artifacts-
 
 ## Open
 
-### Environment
-- [ ] **Prefect local DB conflict.** Running `make pipeline` (or the flow tests) can fail at
-  startup with `alembic ... Can't locate revision '4dfa692e02a7'` when `~/.prefect/prefect.db`
-  was created by / is shared with another project's Prefect version. Workaround: use an isolated
-  store, e.g. `export PREFECT_HOME=$(pwd)/.prefect` before running. Permanent options: scope
-  `PREFECT_HOME` to the project (and gitignore it), or `prefect server database reset` — but a
-  reset wipes other projects' Prefect state too. _Surfaced during the 2026-05-30 runtime verification._
-
-### CI / dependencies
-- [ ] **Pin dependencies or commit a lockfile.** Unpinned floors (e.g. `pandera>=0.18`) let pandera
-  drift to 0.31, which silently broke CI `typecheck` for ~2 months until fixed in PR #2. Add tighter
-  bounds or commit a lockfile (an untracked `uv.lock` already exists locally) so dependency drift
-  can't redden `main` unnoticed.
-- [ ] **Add a dbt job to CI.** CI runs lint/typecheck/pytest but not dbt, so dbt model/test changes
-  are only validated locally. Add a `dbt compile` (or seed-backed `dbt build`) job — see
-  `docs/artifacts-plan.md` Component 4 for a ready-to-paste workflow snippet.
+_Nothing open outside the deferred Phase 2 items below._
 
 ## Deferred (until Phase 2 activates)
 - [ ] **Tier 3 docs.** ADR directory, full column-level data dictionary, intermediate-model column
@@ -28,6 +13,18 @@ This is not a sprint board. For the documentation roadmap, see [`docs/artifacts-
 - [ ] **Phase 2 dataset.** Integrate diabetes readmission (`brandao/diabetes`) as a second fact
   table; the raw-dir placeholder already exists.
 
+## Recently done
+- [x] **Prefect local DB conflict.** `Makefile` now scopes `PREFECT_HOME := $(CURDIR)/.prefect`
+  (gitignored) so a shared `~/.prefect/prefect.db` from another project can't break flow runs.
+- [x] **Pin dependencies / commit a lockfile.** `dbt-core`/`dbt-postgres` pinned to `>=1.10,<1.11`
+  (incremental/snapshot APIs are version-sensitive) and `uv.lock` is now committed.
+- [x] **Add a dbt job to CI.** `.github/workflows/ci.yml` has a `dbt` job that runs `dbt compile`
+  against a Postgres service — validates models, incremental configs, the snapshot, and custom
+  tests without needing Kaggle data.
+- [x] **Incremental + SCD2 milestone.** Replaced full DROP+reload with an idempotent ON CONFLICT
+  upsert loader, incremental `int_claims_enriched`/`fct_claims`, and SCD2 history on the fraud
+  label (`snap_provider_fraud` → `dim_provider_history`). See [`docs/incremental_scd2.md`](docs/incremental_scd2.md).
+
 ---
 
-_Done items are not tracked here. The dbt 1.7 → 1.10 floor bump (commit `aab50d4`) is complete._
+_The dbt 1.7 → 1.10 floor bump (commit `aab50d4`) is complete._

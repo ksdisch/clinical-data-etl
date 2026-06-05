@@ -1,3 +1,12 @@
+{{
+    config(
+        materialized='incremental',
+        unique_key='claim_id',
+        incremental_strategy='delete+insert',
+        on_schema_change='sync_all_columns'
+    )
+}}
+
 select
     claim_id,
     bene_id,
@@ -34,3 +43,6 @@ select
     procedure_code_6
 
 from {{ ref('int_claims_enriched') }}
+{% if is_incremental() %}
+where claim_id not in (select claim_id from {{ this }})
+{% endif %}
