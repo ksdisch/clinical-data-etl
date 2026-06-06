@@ -305,6 +305,7 @@ src/clinical_data_etl/    Python package (ingestion, orchestration, utils)
 dbt/                      dbt project (staging, intermediate, marts models)
 tests/                    pytest test suite
 data/raw/                 Kaggle datasets (gitignored — see setup instructions)
+docs/                     data dictionary, ADRs (docs/adr/), data sources, plans
 ```
 
 ## Makefile Targets
@@ -344,4 +345,6 @@ MVP complete as of April 2026. The pipeline ingests all three sources end-to-end
 
 **Phase 3 — third source (done):** the synthetic hospital-admissions dataset (`amulyas/synthetic-hospital-data`, 5,000 admissions, length-of-stay) is wired as a third, independent star — `stg_hospital_admissions` → `int_admissions_enriched` → `fct_hospital_admissions` (incremental) + `dim_hospital_patient` + a seed-backed `dim_severity`. The source has no usable primary key (`case_id` is recycled), so a deterministic surrogate `admission_id = md5(case_id-patientid)` is minted at ingestion; the Excel `20-Nov`→`11-20` Age/Stay artifact is recoded before validation. The analytical target is length of stay (`is_long_stay` > 30 days). See [`docs/phase3-hospital-plan.md`](docs/phase3-hospital-plan.md).
 
-Remaining (deferred): Tier 3 docs (ADR directory, full data dictionary).
+**Documentation (done):** numbered Architecture Decision Records ([`docs/adr/`](docs/adr/)) capture the load-bearing decisions (ETL-not-ML merge, fraud label in `dim_provider`, independent stars, idempotent upsert, `NOT EXISTS` incremental boundary, SCD2 snapshot, minted surrogate key, seed-backed lookups); a column-level [`docs/data-dictionary.md`](docs/data-dictionary.md) documents every source and mart column across all three stars; and the four intermediate models carry full column descriptions.
+
+Remaining (deferred): a static dbt-lineage screenshot for the README (`make dbt-docs` renders it live; capturing the PNG needs a running DB).

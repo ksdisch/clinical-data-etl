@@ -136,11 +136,15 @@ Now I have everything needed. Here is the complete Phase 4 plan.
 
 ### Tier 3 — Nice to Have (Low urgency, do if Phase 2 activates)
 
-**11. Structured ADR directory (`docs/adr/`)** — The key decisions (ETL-not-ML framing, DROP CASCADE rationale, fraud label in `dim_provider`, 30-row beneficiary rejects as warn) are documented in `PROJECT_GUIDE.md` but not as discrete records. This matters more if Phase 2 introduces new decisions that conflict with Phase 1 choices. Convert the existing decision prose to 3–4 numbered ADR files when Phase 2 begins.
+> **Status update (2026-06-06):** Items 11–13 are **DONE** — `docs/adr/` (10 numbered ADRs + index +
+> template), `docs/data-dictionary.md` (all three stars), and full intermediate-model column
+> descriptions in `dbt/models/intermediate/schema.yml`. See `docs/phase5-tier3-docs-plan.md`.
 
-**12. Data dictionary (`docs/data-dictionary.md`)** — A column-level reference for the Medicare claims columns that have non-obvious names (`ClmAdmitDiagnosisCode`, `IPAnnualReimbursementAmt`, `RenalDiseaseIndicator`, etc.). The pandera `schemas.py` and dbt YAML already contain most of this in machine-readable form — a data dictionary would synthesize it into a human-readable reference. Worth doing when the repo is used in interviews where a viewer will ask "what does this column mean?"
+**11. Structured ADR directory (`docs/adr/`)** ✅ DONE — The key decisions (ETL-not-ML framing, DROP CASCADE rationale, fraud label in `dim_provider`, 30-row beneficiary rejects as warn) are documented in `PROJECT_GUIDE.md` but not as discrete records. This matters more if Phase 2 introduces new decisions that conflict with Phase 1 choices. Convert the existing decision prose to 3–4 numbered ADR files when Phase 2 begins.
 
-**13. `dbt/models/intermediate/schema.yml` column coverage expansion** — `int_claims_enriched` has column descriptions for `claim_id` and `age_at_claim` but not the 11 chronic condition flag columns carried through from `stg_beneficiary`. Low urgency since intermediate models are not the primary analytics interface.
+**12. Data dictionary (`docs/data-dictionary.md`)** ✅ DONE — A column-level reference for the Medicare claims columns that have non-obvious names (`ClmAdmitDiagnosisCode`, `IPAnnualReimbursementAmt`, `RenalDiseaseIndicator`, etc.). The pandera `schemas.py` and dbt YAML already contain most of this in machine-readable form — a data dictionary would synthesize it into a human-readable reference. Worth doing when the repo is used in interviews where a viewer will ask "what does this column mean?"
+
+**13. `dbt/models/intermediate/schema.yml` column coverage expansion** ✅ DONE — `int_claims_enriched` has column descriptions for `claim_id` and `age_at_claim` but not the 11 chronic condition flag columns carried through from `stg_beneficiary`. Low urgency since intermediate models are not the primary analytics interface.
 
 ---
 

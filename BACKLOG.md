@@ -5,13 +5,18 @@ This is not a sprint board. For the documentation roadmap, see [`docs/artifacts-
 
 ## Open
 
-_Nothing open outside the deferred Phase 2 items below._
+_Nothing open._
 
 ## Deferred
-- [ ] **Tier 3 docs.** ADR directory, full column-level data dictionary, intermediate-model column
-  descriptions (see `docs/artifacts-plan.md`).
+- [ ] **dbt lineage screenshot.** `make dbt-docs` renders the DAG, but capturing a static
+  `docs/images/dbt-lineage.png` for the README needs a running DB (Tier 2 #8 in `docs/artifacts-plan.md`).
 
 ## Recently done
+- [x] **Tier 3 docs.** Added a numbered ADR directory (`docs/adr/`, 10 records + index + template)
+  capturing the load-bearing decisions, a column-level `docs/data-dictionary.md` covering all three
+  stars (raw → staging rename → mart), and full column descriptions for the four intermediate models in
+  `dbt/models/intermediate/schema.yml`. Docs-only — no SQL/source behaviour changed. See
+  [`docs/phase5-tier3-docs-plan.md`](docs/phase5-tier3-docs-plan.md).
 - [x] **Tertiary source — synthetic hospital admissions.** Wired `amulyas/synthetic-hospital-data`
   (5,000 admissions) as a third, independent star: `HospitalAdmissionSchema` (mints a surrogate
   `admission_id` because `case_id` is recycled; recodes the Excel `20-Nov`→`11-20` artifact),
