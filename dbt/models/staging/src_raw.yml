@@ -40,3 +40,14 @@ sources:
           with patient_nbr, demographics, utilisation counts, 23 medication
           columns, and the readmitted outcome (NO / >30 / <30). The source '?'
           missing sentinel is recoded to NULL at ingestion. ~101.8K rows.
+      - name: hospital_admissions
+        description: >
+          TERTIARY source — synthetic hospital admissions (Kaggle
+          amulyas/synthetic-hospital-data, the AV Healthcare Analytics II
+          length-of-stay dataset, single CSV). One row per admission. The source
+          has no usable primary key (case_id is recycled across unrelated
+          admissions), so a deterministic surrogate admission_id =
+          md5(case_id-patientid) is minted at ingestion. The Excel '20-Nov'
+          artifact in Age/Stay is recoded back to the '11-20' bracket. Column
+          names keep their source form (incl. spaces); stg_hospital_admissions
+          renames to snake_case. 5,000 rows.

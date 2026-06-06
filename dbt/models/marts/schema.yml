@@ -232,3 +232,93 @@ models:
         description: "Human-readable admission type (Emergency, Urgent, …)"
         tests:
           - not_null
+
+  # ── Hospital star (TERTIARY source) ───────────────────────────────────
+  - name: fct_hospital_admissions
+    description: >
+      Third fact table (TERTIARY source). One row per hospital admission from
+      the synthetic-hospital length-of-stay dataset. Incremental like fct_claims
+      and fct_encounters. Grain is a minted surrogate (admission_id) because the
+      source has no usable primary key. Join to dim_hospital_patient on patient_id
+      and dim_severity on severity_of_illness; hospital/ward/department codes are
+      degenerate dimensions.
+    columns:
+      - name: admission_id
+        description: "Surrogate key = md5(case_id-patientid) (grain)"
+        tests:
+          - unique
+          - not_null
+      - name: patient_id
+        description: "Patient identifier (FK to dim_hospital_patient)"
+        tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_hospital_patient')
+                field: patient_id
+      - name: severity_of_illness
+        description: "Illness severity (FK to dim_severity)"
+        tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_severity')
+                field: severity_of_illness
+      - name: type_of_admission
+        description: "Admission type: Emergency / Trauma / Urgent"
+        tests:
+          - accepted_values:
+              arguments:
+                values: ['Emergency', 'Trauma', 'Urgent']
+      - name: length_of_stay_bracket
+        description: "Length-of-stay bracket (analytical target)"
+      - name: length_of_stay_days
+        description: "Length-of-stay bracket midpoint in days (5–105)"
+      - name: is_long_stay
+        description: "True when length_of_stay_days > 30"
+        tests:
+          - not_null
+      - name: admission_deposit
+        description: "Deposit collected at admission"
+
+  - name: dim_hospital_patient
+    description: >
+      Patient dimension for the hospital star. One row per patient_id; a
+      behavioural rollup (admission counts, average length of stay, deposit
+      totals) rather than a demographic dimension, since the synthetic source has
+      no stable per-patient demographics.
+    columns:
+      - name: patient_id
+        description: "Unique patient identifier"
+        tests:
+          - unique
+          - not_null
+      - name: total_admissions
+        description: "Number of admissions for this patient"
+      - name: distinct_hospitals
+        description: "Number of distinct hospital_codes this patient was admitted to"
+      - name: avg_length_of_stay_days
+        description: "Mean length-of-stay (day midpoints) across the patient's admissions"
+      - name: total_length_of_stay_days
+        description: "Sum of length-of-stay (day midpoints) across the patient's admissions"
+      - name: total_admission_deposit
+        description: "Sum of admission deposits across the patient's admissions"
+      - name: avg_admission_deposit
+        description: "Mean admission deposit across the patient's admissions"
+
+  - name: dim_severity
+    description: >
+      Conformed lookup dimension built from the severity_mapping seed. Maps the
+      Severity of Illness category to an ordinal rank and a description.
+    columns:
+      - name: severity_of_illness
+        description: "Severity category: Minor / Moderate / Extreme"
+        tests:
+          - unique
+          - not_null
+      - name: severity_rank
+        description: "Ordinal acuity rank (Minor=1, Moderate=2, Extreme=3)"
+        tests:
+          - not_null
+      - name: severity_description
+        description: "Human-readable description of the severity level"

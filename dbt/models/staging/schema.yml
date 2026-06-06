@@ -108,3 +108,40 @@ models:
         description: "True when readmitted_status = '<30' (analytical target)"
         tests:
           - not_null
+
+  - name: stg_hospital_admissions
+    description: >
+      Cleaned hospital-admissions staging (TERTIARY source). One row per
+      admission with snake_case columns. The surrogate admission_id and the
+      '20-Nov'->'11-20' Age/Stay recode are done upstream at ingestion; this
+      layer renames the space-containing source columns and casts types.
+    columns:
+      - name: admission_id
+        description: "Surrogate key minted at ingest (grain of the hospital star)"
+        tests:
+          - unique
+          - not_null
+      - name: case_id
+        description: "Recycled source label — NOT unique; kept as a degenerate dim"
+        tests:
+          - not_null
+      - name: patient_id
+        description: "Patient identifier — repeats for the small multi-admission cohort"
+        tests:
+          - not_null
+      - name: type_of_admission
+        tests:
+          - accepted_values:
+              arguments:
+                values: ['Emergency', 'Trauma', 'Urgent']
+      - name: severity_of_illness
+        tests:
+          - accepted_values:
+              arguments:
+                values: ['Minor', 'Moderate', 'Extreme']
+      - name: length_of_stay_bracket
+        description: "Length-of-stay bracket — the analytical target ('11-20' after recode)"
+        tests:
+          - accepted_values:
+              arguments:
+                values: ['0-10', '11-20', '21-30', '31-40', '41-50', '51-60', '61-70', '71-80', '81-90', '91-100', 'More than 100 Days']
