@@ -42,7 +42,8 @@ select
     procedure_code_5,
     procedure_code_6
 
-from {{ ref('int_claims_enriched') }}
+from {{ ref('int_claims_enriched') }} src
 {% if is_incremental() %}
-where claim_id not in (select claim_id from {{ this }})
+-- NOT EXISTS (not NOT IN) so Postgres plans a hash anti-join, keeping re-runs fast.
+where not exists (select 1 from {{ this }} t where t.claim_id = src.claim_id)
 {% endif %}
