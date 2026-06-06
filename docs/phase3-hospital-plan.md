@@ -1,7 +1,12 @@
 # Phase 3 plan — Tertiary source: synthetic-hospital admissions as a third star
 
-> Status: in progress | Branch: `feat/tertiary-synthetic-hospital-star`
+> Status: ✅ complete | Branch: `feat/tertiary-synthetic-hospital-star`
 > Milestone selected via `/autonomous-milestone` backlog triage (highest impact/effort/risk).
+>
+> **Outcome:** third star live (5,000 admissions → `fct_hospital_admissions` + `dim_hospital_patient`
+> + `dim_severity`). `make pipeline` green end-to-end across all three sources; re-run is a ~59s no-op
+> (after the `NOT IN`→`NOT EXISTS` perf fix that cut a >14-min hang). 56 pytest pass; 98 dbt tests
+> (97 pass / 1 expected warn). avg LOS rises with severity (Minor 32 → Moderate 35 → Extreme 39 days).
 
 Wire the tertiary Kaggle dataset (`amulyas/synthetic-hospital-data`,
 `data/raw/synthetic_hospital/HospitalSynthetic1.csv`, 5,000 rows × 18 cols) through
