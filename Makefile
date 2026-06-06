@@ -21,7 +21,7 @@ db-down:
 	docker compose down
 
 test:
-	pytest
+	.venv/bin/pytest
 
 lint:
 	ruff check src/ tests/
