@@ -7,7 +7,10 @@ services:
       POSTGRES_USER: etl_user
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-etl_pass}
     ports:
-      - "5432:5432"
+      # Host port is configurable (defaults to 5432) so a machine where 5432 is
+      # already taken can override it via POSTGRES_PORT in .env. Container port
+      # stays 5432. See .env / .env.example.
+      - "${POSTGRES_PORT:-5432}:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
     healthcheck:

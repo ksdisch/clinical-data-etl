@@ -13,6 +13,7 @@ from sqlalchemy.engine import Connection
 from clinical_data_etl.ingestion.schemas import (
     BeneficiarySchema,
     DiabetesEncounterSchema,
+    HospitalAdmissionSchema,
     InpatientClaimSchema,
     OutpatientClaimSchema,
     ProviderSchema,
@@ -29,6 +30,14 @@ DIABETES_CSV_GLOB = "diabetic_data.csv"
 DIABETES_TABLE = "diabetes_encounters"
 DIABETES_MISSING_SENTINEL = "?"
 
+# --- Tertiary source: synthetic hospital admissions (single CSV) ---
+HOSPITAL_DATA_DIR = PROJECT_ROOT / "data" / "raw" / "synthetic_hospital"
+HOSPITAL_CSV_GLOB = "HospitalSynthetic1.csv"
+HOSPITAL_TABLE = "hospital_admissions"
+# Excel auto-formatted the "11-20" Age/Stay bracket as a date — recode it back.
+HOSPITAL_BRACKET_ARTIFACT = {"20-Nov": "11-20"}
+HOSPITAL_BRACKET_COLS = ("Age", "Stay")
+
 # Natural key per logical table — the column (as named in the merged DataFrame)
 # that uniquely identifies a row and backs the idempotent ON CONFLICT upsert.
 NATURAL_KEYS: dict[str, str] = {
@@ -37,6 +46,7 @@ NATURAL_KEYS: dict[str, str] = {
     "outpatient_claims": "ClaimID",
     "providers": "Provider",
     DIABETES_TABLE: "encounter_id",
+    HOSPITAL_TABLE: "admission_id",
 }
 
 # Audit column stamped on every loaded row. It records FIRST-seen time and is
@@ -135,6 +145,55 @@ def load_diabetes() -> pd.DataFrame:
         )
     raw = pd.concat([pd.read_csv(f) for f in files], ignore_index=True)
     return clean_diabetes_frame(raw)
+
+
+def _hospital_surrogate_key(case_id: object, patient_id: object) -> str:
+    """Deterministic surrogate for a hospital admission.
+
+    Uses md5 (not Python's salted hash) so the key is reproducible across
+    processes and runs — which is what makes the ON CONFLICT upsert idempotent.
+    """
+    return hashlib.md5(f"{case_id}-{patient_id}".encode()).hexdigest()
+
+
+def clean_hospital_frame(df: pd.DataFrame) -> pd.DataFrame:
+    """Recode the hospital dataset's Excel artifact and mint a surrogate key.
+
+    The synthetic-hospital CSV has two quirks that must be fixed BEFORE pandera
+    validation:
+
+    * ``Age`` and ``Stay`` contain the literal ``"20-Nov"`` — Excel auto-formatted
+      the ``"11-20"`` bracket as a date. Recode it back to ``"11-20"``.
+    * The source has no usable primary key: ``case_id`` is recycled across
+      unrelated admissions, and only the ``(case_id, patientid)`` pair is unique.
+      Mint a deterministic surrogate ``admission_id = md5(case_id-patientid)`` so
+      the idempotent ON CONFLICT upsert has a stable single-column natural key.
+
+    Returns a copy — pure and DB-free, so it is unit-testable.
+    """
+    out = df.copy()
+    for col in HOSPITAL_BRACKET_COLS:
+        if col in out.columns:
+            out[col] = out[col].replace(HOSPITAL_BRACKET_ARTIFACT)
+    out["admission_id"] = [
+        _hospital_surrogate_key(case_id, patient_id)
+        for case_id, patient_id in zip(out["case_id"], out["patientid"], strict=True)
+    ]
+    return out
+
+
+def load_hospital() -> pd.DataFrame:
+    """Read the single synthetic-hospital CSV, recode quirks, and mint the key.
+
+    Like diabetes there is no Train/Test split — one CSV, one row per admission.
+    """
+    files = sorted(HOSPITAL_DATA_DIR.glob(HOSPITAL_CSV_GLOB))
+    if not files:
+        raise FileNotFoundError(
+            f"No hospital CSV matching {HOSPITAL_CSV_GLOB} in {HOSPITAL_DATA_DIR}"
+        )
+    raw = pd.concat([pd.read_csv(f) for f in files], ignore_index=True)
+    return clean_hospital_frame(raw)
 
 
 def validate(
@@ -289,7 +348,7 @@ def reset_raw_tables(schema: str = "raw") -> None:
     """
     engine = get_engine()
     with engine.begin() as conn:
-        for table_name in (*TABLE_CONFIG, DIABETES_TABLE):
+        for table_name in (*TABLE_CONFIG, DIABETES_TABLE, HOSPITAL_TABLE):
             exists = conn.execute(
                 text("select to_regclass(:rel)"),
                 {"rel": f"{schema}.{table_name}"},
@@ -363,6 +422,34 @@ def run_ingestion(
     print(f"  Loaded: {loaded} rows to raw.{DIABETES_TABLE}")
 
     summary[DIABETES_TABLE] = {
+        "loaded": loaded,
+        "rejected": len(rejected_df),
+    }
+
+    # --- Tertiary source: synthetic hospital admissions (single CSV) ---
+    print(f"\n{'=' * 50}")
+    print(f"Processing: {HOSPITAL_TABLE}")
+    print(f"{'=' * 50}")
+
+    print(
+        "  Loading hospital CSV (recoding '20-Nov' -> '11-20', minting admission_id)..."
+    )
+    hospital_df = load_hospital()
+    print(f"  Loaded: {len(hospital_df)} rows")
+
+    print("  Validating against schema...")
+    valid_df, rejected_df = validate(
+        hospital_df, HospitalAdmissionSchema, HOSPITAL_TABLE
+    )
+    print(f"  Valid: {len(valid_df)} rows")
+
+    print("  Loading to PostgreSQL raw schema...")
+    loaded = load_to_postgres(
+        valid_df, HOSPITAL_TABLE, mode=mode, ingested_at=ingested_at
+    )
+    print(f"  Loaded: {loaded} rows to raw.{HOSPITAL_TABLE}")
+
+    summary[HOSPITAL_TABLE] = {
         "loaded": loaded,
         "rejected": len(rejected_df),
     }

@@ -143,6 +143,10 @@ def validate_marts_task() -> dict[str, int]:
         "fct_encounters",
         "dim_patient",
         "dim_admission_type",
+        # Hospital star
+        "fct_hospital_admissions",
+        "dim_hospital_patient",
+        "dim_severity",
     ]
     row_counts: dict[str, int] = {}
 

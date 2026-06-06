@@ -1,0 +1,4 @@
+severity_of_illness,severity_rank,severity_description
+Minor,1,Lowest acuity — least severe presentation
+Moderate,2,Intermediate acuity
+Extreme,3,Highest acuity — most severe presentation

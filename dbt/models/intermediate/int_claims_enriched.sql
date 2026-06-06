@@ -9,11 +9,13 @@
 
 with claims as (
 
-    select * from {{ ref('int_claims_unified') }}
+    select * from {{ ref('int_claims_unified') }} src
     {% if is_incremental() %}
     -- Static 2009 data has no time delta, so the honest "new rows only" boundary
-    -- is claim_id set-membership: only claims not yet materialised here.
-    where claim_id not in (select claim_id from {{ this }})
+    -- is claim_id set-membership: only claims not yet materialised here. Use
+    -- NOT EXISTS (not NOT IN) so Postgres plans a hash anti-join instead of a
+    -- per-row subplan — the latter is pathologically slow over ~693k claims.
+    where not exists (select 1 from {{ this }} t where t.claim_id = src.claim_id)
     {% endif %}
 
 ),

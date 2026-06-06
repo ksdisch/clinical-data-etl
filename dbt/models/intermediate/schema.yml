@@ -76,3 +76,27 @@ models:
         description: "True when the patient was readmitted within 30 days"
         tests:
           - not_null
+
+  - name: int_admissions_enriched
+    description: >
+      Hospital admissions (TERTIARY source) with derived analytical features:
+      length_of_stay_days (the Stay bracket mapped to its day midpoint) and
+      is_long_stay (length_of_stay_days > 30). One row per admission.
+    columns:
+      - name: admission_id
+        description: "Surrogate admission identifier"
+        tests:
+          - unique
+          - not_null
+      - name: patient_id
+        description: "Patient identifier (FK to dim_hospital_patient)"
+        tests:
+          - not_null
+      - name: length_of_stay_days
+        description: "Length-of-stay bracket midpoint in days (5–105)"
+        tests:
+          - not_null
+      - name: is_long_stay
+        description: "True when length_of_stay_days > 30 (analytical target)"
+        tests:
+          - not_null

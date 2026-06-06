@@ -7,13 +7,18 @@ This is not a sprint board. For the documentation roadmap, see [`docs/artifacts-
 
 _Nothing open outside the deferred Phase 2 items below._
 
-## Deferred (until Phase 2 continues)
+## Deferred
 - [ ] **Tier 3 docs.** ADR directory, full column-level data dictionary, intermediate-model column
   descriptions (see `docs/artifacts-plan.md`).
-- [ ] **Tertiary dataset.** Integrate the synthetic-hospital CSV (`amulyas/synthetic-hospital-data`)
-  as a third source; raw-dir placeholder already exists.
 
 ## Recently done
+- [x] **Tertiary source — synthetic hospital admissions.** Wired `amulyas/synthetic-hospital-data`
+  (5,000 admissions) as a third, independent star: `HospitalAdmissionSchema` (mints a surrogate
+  `admission_id` because `case_id` is recycled; recodes the Excel `20-Nov`→`11-20` artifact),
+  `stg_hospital_admissions` → `int_admissions_enriched` → `fct_hospital_admissions` (incremental) +
+  `dim_hospital_patient` + seed-backed `dim_severity`. See [`docs/phase3-hospital-plan.md`](docs/phase3-hospital-plan.md).
+- [x] **Incremental re-run perf.** Switched the four incremental models' boundary from `NOT IN` to
+  `NOT EXISTS` (hash anti-join) — a full `make pipeline` re-run dropped from a >14-min hang to ~59s.
 - [x] **Phase 2 second source — diabetes readmission.** Wired `brandao/diabetes` (101,766 encounters)
   through the full pipeline as a second, independent star: `DiabetesEncounterSchema` (`?`→NA),
   `stg_diabetes_encounters` → `int_encounters_enriched` → `fct_encounters` (incremental) +

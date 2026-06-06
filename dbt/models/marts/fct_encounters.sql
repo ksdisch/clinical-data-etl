@@ -52,7 +52,8 @@ select
     readmitted_status,
     is_readmitted_30d
 
-from {{ ref('int_encounters_enriched') }}
+from {{ ref('int_encounters_enriched') }} src
 {% if is_incremental() %}
-where encounter_id not in (select encounter_id from {{ this }})
+-- NOT EXISTS (not NOT IN) so Postgres plans a hash anti-join, keeping re-runs fast.
+where not exists (select 1 from {{ this }} t where t.encounter_id = src.encounter_id)
 {% endif %}

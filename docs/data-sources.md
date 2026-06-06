@@ -34,10 +34,23 @@ Location: `data/raw/diabetes_readmission/`
 No natural key joins the diabetes and claims data — they are modelled as two
 **independent star schemas** sharing the same ingestion/validation/dbt patterns.
 
-### TERTIARY — Synthetic Hospital (Phase 2)
-Source: Kaggle `amulyas/synthetic-hospital-data`
+### TERTIARY — Synthetic Hospital Admissions (WIRED — third fact table)
+Source: Kaggle `amulyas/synthetic-hospital-data` (AV Healthcare Analytics II length-of-stay dataset)
 Location: `data/raw/synthetic_hospital/`
-- `HospitalSynthetic1.csv` — Lightweight dataset for testing and development
+- `HospitalSynthetic1.csv` — **5,000 hospital admissions, 18 columns**, length-of-stay outcome.
+
+| Aspect | Detail |
+|--------|--------|
+| Grain | one row per admission → `fct_hospital_admissions` |
+| Natural key | **none in source** — `case_id` is recycled across unrelated admissions (only `(case_id, patientid)` is unique). A deterministic surrogate `admission_id = md5(case_id-patientid)` is minted at ingestion. |
+| Patient key | `patientid` (4,876 distinct; ~98% appear once) → `dim_hospital_patient` (behavioural rollup) |
+| Source quirk | `Age`/`Stay` contain the literal `20-Nov` — Excel auto-formatting of the `11-20` bracket; recoded back at ingestion before pandera validation |
+| Outcome | `Stay` (length-of-stay bracket incl. `More than 100 Days`); analytical target `is_long_stay` = `length_of_stay_days > 30` (bracket midpoint) |
+| Notable columns | hospital/ward/department codes (randomized — kept as degenerate dimensions), severity of illness, type of admission, admission deposit |
+| Lookup seed | `Severity of Illness` → ordinal rank via `dbt/seeds/severity_mapping.csv` (`dim_severity`) |
+
+No natural key joins this source to the claims or diabetes data — it is the third
+**independent star schema**, sharing the same ingestion/validation/dbt patterns.
 
 ## Folder Layout
 

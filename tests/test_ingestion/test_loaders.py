@@ -8,6 +8,7 @@ import pytest
 from clinical_data_etl.ingestion.loaders import (
     DATA_DIR,
     DIABETES_DATA_DIR,
+    HOSPITAL_DATA_DIR,
     TABLE_CONFIG,
     claim_id_bucket,
     load_and_merge,
@@ -15,11 +16,13 @@ from clinical_data_etl.ingestion.loaders import (
 )
 from clinical_data_etl.ingestion.schemas import ProviderSchema
 
-# True when BOTH sources' CSVs have been downloaded locally. run_ingestion now
-# depends on the claims tables AND the diabetes encounters, so the integration
-# guard must cover every external dependency (not just the claims CSVs).
-_HAS_RAW_DATA = any(DATA_DIR.glob("Train_Beneficiary*.csv")) and any(
-    DIABETES_DATA_DIR.glob("diabetic_data.csv")
+# True when ALL three sources' CSVs have been downloaded locally. run_ingestion
+# depends on the claims tables, the diabetes encounters, AND the hospital
+# admissions, so the integration guard must cover every external dependency.
+_HAS_RAW_DATA = (
+    any(DATA_DIR.glob("Train_Beneficiary*.csv"))
+    and any(DIABETES_DATA_DIR.glob("diabetic_data.csv"))
+    and any(HOSPITAL_DATA_DIR.glob("HospitalSynthetic1.csv"))
 )
 
 # ── load_and_merge ───────────────────────────────────────────────────
@@ -126,6 +129,7 @@ class TestIngestionIntegration:
             "outpatient_claims",
             "providers",
             "diabetes_encounters",
+            "hospital_admissions",
         }
 
         engine = get_engine()
