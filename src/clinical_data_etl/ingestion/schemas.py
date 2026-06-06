@@ -36,6 +36,10 @@ def _nullable_str_columns(names: list[str]) -> dict[str, Column]:
     return {col: Column(str, nullable=True) for col in names}
 
 
+def _nonneg_int(*, nullable: bool = False) -> Column:
+    return Column(int, pa.Check.ge(0), nullable=nullable)
+
+
 BeneficiarySchema = DataFrameSchema(
     columns={
         "BeneID": Column(str, nullable=False, unique=True),
@@ -108,6 +112,93 @@ ProviderSchema = DataFrameSchema(
 
 
 # ─────────────────────────────────────────────────────────────────────
+# Tertiary source: Synthetic hospital admissions (Kaggle amulyas/synthetic-
+# hospital-data — the AV Healthcare Analytics II length-of-stay dataset).
+# Single CSV, grain = one hospital admission. Two source quirks are recoded by
+# the loader BEFORE validation (see clean_hospital_frame):
+#   * the source has NO usable primary key — `case_id` is recycled across
+#     unrelated admissions, so a deterministic surrogate `admission_id`
+#     (md5 of the unique (case_id, patientid) business key) is minted at ingest;
+#   * `Age`/`Stay` carry the literal "20-Nov", an Excel auto-date corruption of
+#     the "11-20" bracket, which is recoded back to "11-20".
+# Column names keep their source form (incl. spaces) here; the dbt staging model
+# renames to snake_case — same split as the diabetes source.
+# ─────────────────────────────────────────────────────────────────────
+
+# Age is binned into 10-year brackets ("11-20" after the 20-Nov recode).
+_HOSPITAL_AGE_BRACKETS = [
+    "0-10",
+    "11-20",
+    "21-30",
+    "31-40",
+    "41-50",
+    "51-60",
+    "61-70",
+    "71-80",
+    "81-90",
+    "91-100",
+]
+
+# Length-of-stay brackets: the age brackets plus an open-ended top bucket.
+_HOSPITAL_STAY_BRACKETS = [*_HOSPITAL_AGE_BRACKETS, "More than 100 Days"]
+
+
+HospitalAdmissionSchema = DataFrameSchema(
+    columns={
+        # Surrogate key minted at ingest (md5 of the unique case_id+patientid pair).
+        "admission_id": Column(str, nullable=False, unique=True),
+        # Recycled source label (NOT unique) + patient id — kept as degenerate dims.
+        "case_id": Column(str, nullable=False),
+        "patientid": Column(str, nullable=False),
+        # Hospital attributes (degenerate dims — codes are randomized, no clean FD).
+        "Hospital_code": Column(int, nullable=False),
+        "Hospital_type_code": Column(
+            str, pa.Check.isin(["a", "b", "c", "d", "e", "f", "g"]), nullable=False
+        ),
+        "City_Code_Hospital": Column(int, nullable=False),
+        "Hospital_region_code": Column(
+            str, pa.Check.isin(["X", "Y", "Z"]), nullable=False
+        ),
+        "Available Extra Rooms in Hospital": _nonneg_int(),
+        "Department": Column(
+            str,
+            pa.Check.isin(
+                [
+                    "TB & Chest disease",
+                    "anesthesia",
+                    "gynecology",
+                    "radiotherapy",
+                    "surgery",
+                ]
+            ),
+            nullable=False,
+        ),
+        "Ward_Type": Column(
+            str, pa.Check.isin(["P", "Q", "R", "S", "T"]), nullable=False
+        ),
+        "Ward_Facility_Code": Column(
+            str, pa.Check.isin(["A", "B", "C", "D", "E", "F"]), nullable=False
+        ),
+        # Nullable in source (31 nulls); 1–4 ordinal bed quality grade.
+        "Bed Grade": Column(float, pa.Check.isin([1.0, 2.0, 3.0, 4.0]), nullable=True),
+        "City_Code_Patient": Column(float, pa.Check.ge(1), nullable=True),
+        "Type of Admission": Column(
+            str, pa.Check.isin(["Emergency", "Trauma", "Urgent"]), nullable=False
+        ),
+        "Severity of Illness": Column(
+            str, pa.Check.isin(["Minor", "Moderate", "Extreme"]), nullable=False
+        ),
+        "Visitors with Patient": _nonneg_int(),
+        "Age": Column(str, pa.Check.isin(_HOSPITAL_AGE_BRACKETS), nullable=False),
+        "Admission_Deposit": Column(float, pa.Check.ge(0), nullable=False),
+        # Analytical target — length-of-stay bracket.
+        "Stay": Column(str, pa.Check.isin(_HOSPITAL_STAY_BRACKETS), nullable=False),
+    },
+    coerce=True,
+)
+
+
+# ─────────────────────────────────────────────────────────────────────
 # Secondary source: Diabetes readmission (UCI 130-US-hospitals, 1999–2008)
 # Single CSV, grain = one hospital encounter. The '?' missing sentinel is
 # recoded to NA by the loader BEFORE validation, so nullable columns pass.
@@ -162,10 +253,6 @@ def _medication_columns() -> dict[str, Column]:
         col: Column(str, pa.Check.isin(_MED_VALUES), nullable=False)
         for col in _DIABETES_MED_COLS
     }
-
-
-def _nonneg_int(*, nullable: bool = False) -> Column:
-    return Column(int, pa.Check.ge(0), nullable=nullable)
 
 
 DiabetesEncounterSchema = DataFrameSchema(
