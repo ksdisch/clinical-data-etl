@@ -1,5 +1,9 @@
 # Data Sources & Folder Layout
 
+> For a column-level reference (raw → staging rename → mart, with types, nullability, and recodes)
+> across all three stars, see [`docs/data-dictionary.md`](data-dictionary.md). For the decisions
+> behind the recodes and surrogate keys, see [`docs/adr/`](adr/).
+
 ## Data Sources
 
 ### PRIMARY — Medicare Claims Fraud Detection

@@ -27,31 +27,111 @@ models:
               arguments:
                 values: ['inpatient', 'outpatient']
       - name: claim_start_date
-        description: "Claim start date"
+        description: "First date of the claim period"
         tests:
           - not_null
+      - name: claim_end_date
+        description: "Last date of the claim period"
+      - name: admission_date
+        description: "Hospital admission date. NULL for outpatient claims."
+      - name: discharge_date
+        description: "Hospital discharge date. NULL for outpatient claims."
+      - name: claim_duration_days
+        description: "discharge_date − admission_date in days. NULL for outpatient claims."
       - name: reimbursement_amount
-        description: "Claim reimbursement amount"
+        description: "Medicare reimbursement amount for this claim"
         tests:
           - not_null
+      - name: deductible_amount
+        description: "Deductible amount applied to this claim. Nullable in source."
+      - name: attending_physician
+        description: "Attending physician id (nullable)"
+      - name: operating_physician
+        description: "Operating physician id (nullable)"
+      - name: other_physician
+        description: "Other physician id (nullable)"
+      - name: admit_diagnosis_code
+        description: "Admitting diagnosis code, ICD-9 (nullable)"
+      - name: diagnosis_group_code
+        description: "Diagnosis-related group (DRG) code. NULL for outpatient claims."
+      - name: diagnosis_code_1
+        description: "ICD-9 diagnosis codes (diagnosis_code_1 … diagnosis_code_10); up to 10 per claim, nullable."
+      - name: procedure_code_1
+        description: "Procedure codes (procedure_code_1 … procedure_code_6); up to 6 per claim, nullable."
 
   - name: int_claims_enriched
     description: >
       Unified claims joined to beneficiary demographics.
-      Adds gender, race, date_of_birth, age_at_claim, and
-      chronic condition flags onto each claim row.
+      Adds gender, race, date_of_birth, age_at_claim, and the 11
+      chronic condition flags onto each claim row. Materialized
+      incremental (unique_key=claim_id, delete+insert); the incremental
+      boundary is a NOT EXISTS set-membership anti-join (see ADR-006).
     columns:
       - name: claim_id
         description: "Unique claim identifier"
         tests:
           - unique
           - not_null
-      - name: age_at_claim
-        description: "Beneficiary age in years at claim_start_date"
+      - name: bene_id
+        description: "Beneficiary ID (FK to stg_beneficiary)"
+      - name: provider_id
+        description: "Provider ID (FK to stg_providers)"
+      - name: claim_type
+        description: "'inpatient' or 'outpatient'"
       - name: claim_start_date
         description: "Claim start date — must be on or before claim_end_date"
         tests:
           - not_null
+      - name: claim_end_date
+        description: "Last date of the claim period"
+      - name: admission_date
+        description: "Hospital admission date. NULL for outpatient claims."
+      - name: discharge_date
+        description: "Hospital discharge date. NULL for outpatient claims."
+      - name: claim_duration_days
+        description: "Claim length in days. NULL for outpatient claims."
+      - name: reimbursement_amount
+        description: "Medicare reimbursement amount for this claim"
+      - name: deductible_amount
+        description: "Deductible amount applied to this claim"
+      - name: admit_diagnosis_code
+        description: "Admitting diagnosis code, ICD-9 (nullable)"
+      - name: diagnosis_group_code
+        description: "Diagnosis-related group (DRG) code. NULL for outpatient claims."
+      - name: diagnosis_code_1
+        description: "ICD-9 diagnosis codes (diagnosis_code_1 … diagnosis_code_10) carried from staging."
+      - name: procedure_code_1
+        description: "Procedure codes (procedure_code_1 … procedure_code_6) carried from staging."
+      - name: gender
+        description: "Beneficiary gender ('Male'/'Female'), from the joined beneficiary row"
+      - name: race
+        description: "Beneficiary race category, from the joined beneficiary row"
+      - name: date_of_birth
+        description: "Beneficiary date of birth, from the joined beneficiary row"
+      - name: age_at_claim
+        description: "Beneficiary age in whole years at claim_start_date"
+      - name: has_alzheimers
+        description: "Chronic condition flag carried from stg_beneficiary (true = present)"
+      - name: has_heart_failure
+        description: "Chronic condition flag carried from stg_beneficiary (true = present)"
+      - name: has_kidney_disease
+        description: "Chronic condition flag carried from stg_beneficiary (true = present)"
+      - name: has_cancer
+        description: "Chronic condition flag carried from stg_beneficiary (true = present)"
+      - name: has_obstr_pulmonary
+        description: "Chronic condition flag carried from stg_beneficiary (true = present)"
+      - name: has_depression
+        description: "Chronic condition flag carried from stg_beneficiary (true = present)"
+      - name: has_diabetes
+        description: "Chronic condition flag carried from stg_beneficiary (true = present)"
+      - name: has_ischemic_heart
+        description: "Chronic condition flag carried from stg_beneficiary (true = present)"
+      - name: has_osteoporosis
+        description: "Chronic condition flag carried from stg_beneficiary (true = present)"
+      - name: has_rheumatoid_arthritis
+        description: "Chronic condition flag carried from stg_beneficiary (true = present)"
+      - name: has_stroke
+        description: "Chronic condition flag carried from stg_beneficiary (true = present)"
 
   - name: int_encounters_enriched
     description: >
@@ -68,10 +148,60 @@ models:
         description: "Patient identifier (FK to dim_patient)"
         tests:
           - not_null
+      - name: race
+        description: "Race from the encounter (NULL where the source had '?')"
+      - name: gender
+        description: "Gender: Female / Male / Unknown/Invalid"
+      - name: age_bracket
+        description: "10-year age bracket, e.g. [60-70)"
+      - name: admission_type_id
+        description: "Admission type code 1–8 (labelled via dim_admission_type)"
+      - name: discharge_disposition_id
+        description: "Discharge disposition code (degenerate dimension)"
+      - name: admission_source_id
+        description: "Admission source code (degenerate dimension)"
+      - name: medical_specialty
+        description: "Admitting physician specialty (nullable)"
+      - name: time_in_hospital
+        description: "Length of stay in days (1–14)"
+      - name: num_lab_procedures
+        description: "Lab procedures performed during the encounter"
+      - name: num_procedures
+        description: "Non-lab procedures performed during the encounter"
+      - name: num_medications
+        description: "Distinct medications administered during the encounter"
+      - name: number_outpatient
+        description: "Prior-year outpatient visits"
+      - name: number_emergency
+        description: "Prior-year emergency visits"
+      - name: number_inpatient
+        description: "Prior-year inpatient visits"
+      - name: number_diagnoses
+        description: "Number of diagnoses entered for the encounter"
       - name: num_prior_visits
         description: "Sum of prior outpatient, emergency, and inpatient visits"
       - name: num_diabetes_meds
         description: "Count of the 23 tracked medications not set to 'No' (0–23)"
+      - name: diag_1
+        description: "Primary diagnosis (ICD-9, nullable)"
+      - name: diag_2
+        description: "Secondary diagnosis (ICD-9, nullable)"
+      - name: diag_3
+        description: "Additional diagnosis (ICD-9, nullable)"
+      - name: max_glu_serum
+        description: "Glucose serum test result: Norm / >200 / >300 (NULL if not taken)"
+      - name: a1c_result
+        description: "A1C test result: Norm / >7 / >8 (NULL if not taken)"
+      - name: insulin
+        description: "Insulin dose-change signal kept on the grain: No / Steady / Up / Down"
+      - name: metformin
+        description: "Metformin dose-change signal kept on the grain: No / Steady / Up / Down"
+      - name: had_med_change
+        description: "True when any medication was changed this encounter (source 'change' = 'Ch')"
+      - name: on_diabetes_med
+        description: "True when any diabetes medication was prescribed (source 'diabetesMed' = 'Yes')"
+      - name: readmitted_status
+        description: "3-class readmission outcome: NO / >30 / <30"
       - name: is_readmitted_30d
         description: "True when the patient was readmitted within 30 days"
         tests:
@@ -84,14 +214,48 @@ models:
       is_long_stay (length_of_stay_days > 30). One row per admission.
     columns:
       - name: admission_id
-        description: "Surrogate admission identifier"
+        description: "Surrogate admission identifier (md5 of case_id+patientid)"
         tests:
           - unique
           - not_null
+      - name: case_id
+        description: "Recycled source label (NOT unique); kept as a degenerate dimension"
       - name: patient_id
         description: "Patient identifier (FK to dim_hospital_patient)"
         tests:
           - not_null
+      - name: hospital_code
+        description: "Hospital code (randomized — degenerate dimension)"
+      - name: hospital_type_code
+        description: "Hospital type code a–g"
+      - name: city_code_hospital
+        description: "Hospital city code"
+      - name: hospital_region_code
+        description: "Hospital region code X / Y / Z"
+      - name: ward_type
+        description: "Ward type P / Q / R / S / T"
+      - name: ward_facility_code
+        description: "Ward facility code A–F"
+      - name: department
+        description: "Treating department (e.g. surgery, gynecology)"
+      - name: bed_grade
+        description: "Ordinal bed quality grade 1–4 (nullable)"
+      - name: available_extra_rooms
+        description: "Spare rooms in the hospital at admission"
+      - name: city_code_patient
+        description: "Patient city code (nullable)"
+      - name: type_of_admission
+        description: "Admission type: Emergency / Trauma / Urgent"
+      - name: severity_of_illness
+        description: "Illness severity: Minor / Moderate / Extreme (FK to dim_severity)"
+      - name: visitors_with_patient
+        description: "Number of visitors accompanying the patient"
+      - name: age_bracket
+        description: "10-year age bracket (e.g. 11-20, after the 20-Nov recode)"
+      - name: admission_deposit
+        description: "Deposit collected at admission"
+      - name: length_of_stay_bracket
+        description: "Length-of-stay bracket (analytical target; incl. 'More than 100 Days')"
       - name: length_of_stay_days
         description: "Length-of-stay bracket midpoint in days (5–105)"
         tests:

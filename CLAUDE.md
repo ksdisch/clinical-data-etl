@@ -17,7 +17,7 @@ This project exists to showcase:
 - **SECONDARY** (WIRED): Diabetes Readmission (`data/raw/diabetes_readmission/diabetic_data.csv`) — single CSV, 101,766 encounters, grain `encounter_id`. The `?` missing sentinel is recoded to NULL before validation. Modelled as a second, independent star (`fct_encounters` + `dim_patient` + seed-backed `dim_admission_type`).
 - **TERTIARY** (WIRED): Synthetic Hospital Admissions (`data/raw/synthetic_hospital/HospitalSynthetic1.csv`) — single CSV, 5,000 admissions, length-of-stay target. The source has **no usable primary key** (`case_id` is recycled across unrelated admissions; only `(case_id, patientid)` is unique), so a deterministic surrogate `admission_id = md5(case_id-patientid)` is minted at ingestion. The Excel `20-Nov` artifact (a mangled `11-20` bracket) in `Age`/`Stay` is recoded before validation. Modelled as a third, independent star (`fct_hospital_admissions` + `dim_hospital_patient` + seed-backed `dim_severity`).
 
-Full CSV filenames and column descriptions: [`docs/data-sources.md`](docs/data-sources.md)
+Full CSV filenames and column descriptions: [`docs/data-sources.md`](docs/data-sources.md) · column-level reference: [`docs/data-dictionary.md`](docs/data-dictionary.md) · decision records: [`docs/adr/`](docs/adr/)
 
 ## Tech Stack
 
@@ -157,7 +157,7 @@ Commands and skills vendored into `.claude/` so they work in cloud/web sessions 
 
 ## Current Priority
 
-**Phase 3 third-source milestone complete** (synthetic hospital admissions wired as a third independent star), on top of the Phase 2 diabetes second star, the production-shaping milestone (incremental models + idempotent backfills + SCD2 history), and the MVP. Next: Tier 3 docs (ADR directory, full data dictionary).
+**Tier 3 docs milestone complete** — numbered ADR directory ([`docs/adr/`](docs/adr/), 10 records), a column-level [`docs/data-dictionary.md`](docs/data-dictionary.md) across all three stars, and full column descriptions on the four intermediate models. This sits on top of the Phase 3 third-source star (synthetic hospital admissions), the Phase 2 diabetes second star, the production-shaping milestone (incremental models + idempotent backfills + SCD2 history), and the MVP. The documentation roadmap (`docs/artifacts-plan.md`) is now drained except the optional dbt-lineage screenshot (needs a running DB).
 
 ### What works now
 - `make pipeline` — idempotent end-to-end across **all three sources**: upsert ingest → `dbt seed` → `dbt snapshot` → incremental `dbt run` (20 models) → `dbt test` → validate marts (all three stars). Re-running is a no-op (~1 min — the incremental boundary uses `NOT EXISTS` hash anti-joins, not `NOT IN`); raw tables accumulate via `ON CONFLICT` (no more DROP+reload).
