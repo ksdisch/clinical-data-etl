@@ -182,3 +182,7 @@ Commands and skills vendored into `.claude/` so they work in cloud/web sessions 
 - SCD2: `dbt/snapshots/snap_provider_fraud.sql` (check strategy on `is_potential_fraud`, reads `source('raw','providers')`) → `dim_provider_history` mart, with no-overlap / one-current invariant tests in `dbt/tests/`.
 - The data is single-vintage (~2009), so incrementality and history are demonstrated with **deterministic seeded** inputs (hash-bucketed claims; a seeded fraud-flag flip) — framed honestly as seeded demos, not real CDC.
 - Loader: `load_to_postgres(..., mode='upsert'|'replace')` stamps a first-seen `ingested_at` (never overwritten on conflict) and ensures a unique index per natural key.
+
+## Operating Constraints
+
+@.claude/operating-constraints.md
