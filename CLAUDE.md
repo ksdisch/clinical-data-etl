@@ -126,7 +126,7 @@ Annotated layout: [`docs/data-sources.md`](docs/data-sources.md)
 
 ## Claude tooling for this repo
 
-Commands and skills vendored into `.claude/` so they work in cloud/web sessions and for collaborators. Invoke a command with `/<name>`; skills auto-trigger or can be invoked by name. All items below are cloud-safe (pure reasoning + repo edits — no local-only browser/MCP dependencies).
+Commands and skills vendored into `.claude/` so they work in cloud/web sessions and for collaborators. Invoke a command with `/<name>`; skills auto-trigger or can be invoked by name. Items marked 💻 are **local-only** (need browser MCP, Chrome, local TTS/voice, or the local `nlm` CLI / NotebookLM MCP) and won't run in a cloud/web session; everything else is cloud-safe (pure reasoning + repo edits).
 
 ### Commands (`.claude/commands/`)
 - **`/explore-plan`** — Explore → plan → confirm before any code; proposes 2–3 ranked approaches and waits for you to pick.
@@ -136,12 +136,40 @@ Commands and skills vendored into `.claude/` so they work in cloud/web sessions 
 - **`/begin`** — Session-start orientation: branch, recent commits, open PRs, recap from the last `/wrap` log.
 - **`/trim-context`** — Find and fix Claude Code token bloat (oversized CLAUDE.md vs the 40k limit, bloated memory, `.claude/` cruft).
 - **`/autonomous-milestone`** — Plan/build/test/verify a milestone end-to-end, or triage the backlog into ranked candidates. Uses multi-agent orchestration (higher cost).
+- **`/brainstorm`** — Multi-mode structured brainstorm (Moonshot default; QuickWin, Subtract, Harden, Premortem, Friction, Delight, Positioning, Reach); blind agent teams + critic gate → `docs/ideas/` vision docs + backlog stubs.
+- **`/claudify-repo`** — Vendor global commands/skills into this repo and/or brainstorm repo-specific automations.
+- **`/prompt-optimize`** — One-shot prompt rewrite: diagnose, pick a workflow archetype + model + effort, return a ready-to-paste prompt. Advisory only.
+- **`/reframe-orchestrator`** — Reframe `.claude/orchestrator.md` into a mode-independent invariants & gates doc; docs-only.
+- **`/mock-sql-demo`** — Text self-play mock SQL interview (interviewer + ideal candidate), then a debrief.
+- 💻 **`/boot_server`** — Detect how the project is served, start the dev server, open it in Chrome.
+- 💻 **`/catchup`** — Mid-session audio catch-up as an MP3 (local TTS); keeps working after.
+- 💻 **`/envsetup`** — Open `.env` in the editor + the credential's generation page in Chrome, with a key stub pre-added.
+- 💻 **`/mock-sql-audio`** — Full simulated SQL mock interview as an MP3 (local two-voice TTS).
+- 💻 **`/mock-sql-interview`** — Live voice mock SQL interview (local voice mode).
+- 💻 **`/screenshot-iterate`** — Visual loop: implement against a mock, screenshot the running app, compare, iterate.
+- 💻 **`/smoke-test`** — Manual smoke test setup: opens the needed pages in Chrome and hands over a do-this-see-that checklist saved under `docs/smoke/`.
 
 ### Skills (`.claude/skills/`)
 - **`artifacts-audit`** — Audit the repo for which engineering artifacts (ADRs, runbooks, ERDs, design docs) it should have; writes `docs/artifacts-plan.md`. Plans only, no source changes.
 - **`artifacts-generate`** — Generate the artifacts from that plan (READMEs, ADRs, ERDs, runbooks). Companion to `artifacts-audit`.
 - **`new-dbt-model`** — Scaffold a dbt model to this repo's conventions (layer + `stg_/int_/fct_/dim_` prefix, paired `schema.yml` tests, the `delete+insert` incremental config pattern). Invoke with `/new-dbt-model`.
 - **`add-source`** — Wire a new raw source end-to-end (pandera schema → upsert loader → `raw` table → staging → independent star), following the diabetes path. Invoke with `/add-source`.
+- **`bug-hunt`** — Proactive bug hunt: fan out finder agents, adversarially verify findings, ranked triage list.
+- **`kickoff`** — Deep discovery interview → approved kickoff brief + phased plan → scaffold a new project + GitHub repo.
+- **`mini`** — Kick off a new mini project under `~/Projects/mini/` (short interview + scaffold).
+- **`project-guide`** — Comprehensive point-in-time guide to the project (purpose, architecture, history, interview lens); saves a dated file.
+- **`research-paper`** — End-of-project research paper + presenter pack from a completed repo's recorded results; opens a PR for review, never merges.
+- **`seed-hunt`** — End-of-project seed hunt: verify closure, harvest lessons, sweep arXiv, decision brief.
+- **`ship-and-route`** — Land outstanding git work behind a review gate, walk the findings, route the next move with a starter prompt.
+- 💻 **`audio-series`** — Episodic NotebookLM audio series for an existing notebook (needs `nlm`/NotebookLM MCP).
+- 💻 **`interview-prep`** — Init/maintain a NotebookLM interview-prep notebook (needs `nlm`/NotebookLM MCP).
+- 💻 **`match-the-mock`** — Implement a UI against a mock and iterate via browser screenshots until it matches.
+- 💻 **`narrate`** — Turn a short brief into a single-voice MP3 narration (local Kokoro TTS).
+- 💻 **`nlm-skill`** — Expert guide for the NotebookLM CLI (`nlm`) and MCP server.
+- 💻 **`notebook-assist`** — Refine artifacts / brainstorm / manage sources for an existing NotebookLM notebook.
+- 💻 **`notebook-init`** — Initialize a new NotebookLM notebook end-to-end.
+- 💻 **`notebook-merge`** — Merge 2+ overlapping NotebookLM notebooks into one unified notebook.
+- 💻 **`video-series`** — Episodic NotebookLM video series for an existing notebook (needs `nlm`/NotebookLM MCP).
 
 ### Subagents (`.claude/agents/`)
 - **`dbt-model-reviewer`** — Reviews dbt changes against this repo's modeling rules (grain integrity, fraud label stays in `dim_provider`, incremental boundary, tests present). Read-only.
