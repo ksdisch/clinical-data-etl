@@ -348,3 +348,7 @@ MVP complete as of April 2026. The pipeline ingests all three sources end-to-end
 **Documentation (done):** numbered Architecture Decision Records ([`docs/adr/`](docs/adr/)) capture the load-bearing decisions (ETL-not-ML merge, fraud label in `dim_provider`, independent stars, idempotent upsert, `NOT EXISTS` incremental boundary, SCD2 snapshot, minted surrogate key, seed-backed lookups); a column-level [`docs/data-dictionary.md`](docs/data-dictionary.md) documents every source and mart column across all three stars; and the four intermediate models carry full column descriptions.
 
 Remaining (deferred): a static dbt-lineage screenshot for the README (`make dbt-docs` renders it live; capturing the PNG needs a running DB).
+
+---
+
+📚 **Project wiki:** [PROJECT.md](PROJECT.md) — status, scope, and next actions · [Wiki/_index.md](Wiki/_index.md) — topic pages and history
