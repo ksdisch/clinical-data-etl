@@ -147,26 +147,8 @@ Commands and skills vendored into `.claude/` so they work in cloud/web sessions 
 - 💻 **`/smoke-test`** — Manual smoke test setup: opens the needed pages in Chrome and hands over a do-this-see-that checklist saved under `docs/smoke/`.
 
 ### Skills (`.claude/skills/`)
-- **`artifacts-audit`** — Audit the repo for which engineering artifacts (ADRs, runbooks, ERDs, design docs) it should have; writes `docs/artifacts-plan.md`. Plans only, no source changes.
-- **`artifacts-generate`** — Generate the artifacts from that plan (READMEs, ADRs, ERDs, runbooks). Companion to `artifacts-audit`.
 - **`new-dbt-model`** — Scaffold a dbt model to this repo's conventions (layer + `stg_/int_/fct_/dim_` prefix, paired `schema.yml` tests, the `delete+insert` incremental config pattern). Invoke with `/new-dbt-model`.
 - **`add-source`** — Wire a new raw source end-to-end (pandera schema → upsert loader → `raw` table → staging → independent star), following the diabetes path. Invoke with `/add-source`.
-- **`bug-hunt`** — Proactive bug hunt: fan out finder agents, adversarially verify findings, ranked triage list.
-- **`kickoff`** — Deep discovery interview → approved kickoff brief + phased plan → scaffold a new project + GitHub repo.
-- **`mini`** — Kick off a new mini project under `~/Projects/mini/` (short interview + scaffold).
-- **`project-guide`** — Comprehensive point-in-time guide to the project (purpose, architecture, history, interview lens); saves a dated file.
-- **`research-paper`** — End-of-project research paper + presenter pack from a completed repo's recorded results; opens a PR for review, never merges.
-- **`seed-hunt`** — End-of-project seed hunt: verify closure, harvest lessons, sweep arXiv, decision brief.
-- **`ship-and-route`** — Land outstanding git work behind a review gate, walk the findings, route the next move with a starter prompt.
-- 💻 **`audio-series`** — Episodic NotebookLM audio series for an existing notebook (needs `nlm`/NotebookLM MCP).
-- 💻 **`interview-prep`** — Init/maintain a NotebookLM interview-prep notebook (needs `nlm`/NotebookLM MCP).
-- 💻 **`match-the-mock`** — Implement a UI against a mock and iterate via browser screenshots until it matches.
-- 💻 **`narrate`** — Turn a short brief into a single-voice MP3 narration (local Kokoro TTS).
-- 💻 **`nlm-skill`** — Expert guide for the NotebookLM CLI (`nlm`) and MCP server.
-- 💻 **`notebook-assist`** — Refine artifacts / brainstorm / manage sources for an existing NotebookLM notebook.
-- 💻 **`notebook-init`** — Initialize a new NotebookLM notebook end-to-end.
-- 💻 **`notebook-merge`** — Merge 2+ overlapping NotebookLM notebooks into one unified notebook.
-- 💻 **`video-series`** — Episodic NotebookLM video series for an existing notebook (needs `nlm`/NotebookLM MCP).
 
 ### Subagents (`.claude/agents/`)
 - **`dbt-model-reviewer`** — Reviews dbt changes against this repo's modeling rules (grain integrity, fraud label stays in `dim_provider`, incremental boundary, tests present). Read-only.
