@@ -18,7 +18,7 @@ Active (between milestones). MVP + production-shaping (incremental/SCD2) + Phase
 
 ## Next actions
 1. (Deferred, optional) Capture the static dbt-lineage screenshot for the README — requires a running Postgres + `make dbt-docs`
-2. Decide the next milestone (no open backlog items) — e.g. via `/brainstorm` or `/autonomous-milestone` triage
+2. Decide the next milestone (no open backlog items)
 
 ## Boundaries
 - Tech: Python 3.11+, PostgreSQL 16 via Docker (local port 5433), dbt-core/dbt-postgres pinned `>=1.10,<1.11` (incremental/snapshot APIs are version-sensitive), Prefect 2.x with repo-scoped `PREFECT_HOME`

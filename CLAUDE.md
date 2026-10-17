@@ -129,22 +129,8 @@ Annotated layout: [`docs/data-sources.md`](docs/data-sources.md)
 Commands and skills vendored into `.claude/` so they work in cloud/web sessions and for collaborators. Invoke a command with `/<name>`; skills auto-trigger or can be invoked by name. Items marked 💻 are **local-only** (need browser MCP, Chrome, local TTS/voice, or the local `nlm` CLI / NotebookLM MCP) and won't run in a cloud/web session; everything else is cloud-safe (pure reasoning + repo edits).
 
 ### Commands (`.claude/commands/`)
-- **`/explore-plan`** — Explore → plan → confirm before any code; proposes 2–3 ranked approaches and waits for you to pick.
 - **`/tdd`** — Test-first loop: write failing tests for a spec, confirm they fail, then code until green without modifying the tests.
 - **`/handoff`** — Generate a self-contained handoff prompt to continue the work in a fresh session; captures lessons + plan state.
-- **`/wrap`** — End-of-session recap with active-recall quiz and next moves; saves a dated log.
-- **`/begin`** — Session-start orientation: branch, recent commits, open PRs, recap from the last `/wrap` log.
-- **`/trim-context`** — Find and fix Claude Code token bloat (oversized CLAUDE.md vs the 40k limit, bloated memory, `.claude/` cruft).
-- **`/autonomous-milestone`** — Plan/build/test/verify a milestone end-to-end, or triage the backlog into ranked candidates. Uses multi-agent orchestration (higher cost).
-- **`/brainstorm`** — Multi-mode structured brainstorm (Moonshot default; QuickWin, Subtract, Harden, Premortem, Friction, Delight, Positioning, Reach); blind agent teams + critic gate → `docs/ideas/` vision docs + backlog stubs.
-- **`/claudify-repo`** — Vendor global commands/skills into this repo and/or brainstorm repo-specific automations.
-- **`/prompt-optimize`** — One-shot prompt rewrite: diagnose, pick a workflow archetype + model + effort, return a ready-to-paste prompt. Advisory only.
-- **`/reframe-orchestrator`** — Reframe `.claude/orchestrator.md` into a mode-independent invariants & gates doc; docs-only.
-- 💻 **`/boot_server`** — Detect how the project is served, start the dev server, open it in Chrome.
-- 💻 **`/catchup`** — Mid-session audio catch-up as an MP3 (local TTS); keeps working after.
-- 💻 **`/envsetup`** — Open `.env` in the editor + the credential's generation page in Chrome, with a key stub pre-added.
-- 💻 **`/screenshot-iterate`** — Visual loop: implement against a mock, screenshot the running app, compare, iterate.
-- 💻 **`/smoke-test`** — Manual smoke test setup: opens the needed pages in Chrome and hands over a do-this-see-that checklist saved under `docs/smoke/`.
 
 ### Skills (`.claude/skills/`)
 - **`new-dbt-model`** — Scaffold a dbt model to this repo's conventions (layer + `stg_/int_/fct_/dim_` prefix, paired `schema.yml` tests, the `delete+insert` incremental config pattern). Invoke with `/new-dbt-model`.
